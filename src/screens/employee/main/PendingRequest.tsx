@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { DataContext } from '../../../store/GlobalState';
 import { useIsFocused } from '@react-navigation/native';
@@ -13,16 +14,16 @@ import { getData } from '../../../utils/fetchData';
 import moment from 'moment';
 import sample_profile_avatar from '../../../assets/sample_profile_avatar.png';
 import Pagination from '../../../components/Pagination';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { ACTIONS } from '../../../store/Actions';
 
 export default function PendingRequest({ navigation }: any) {
   const { state, dispatch } = useContext(DataContext)!;
-  const { auth, pendingAppointmentList } = state;
+  const { auth, pendingAppointmentList, language } = state;
 
   const isFocused = useIsFocused();
-
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
   const scrollRef = useRef<ScrollView>(null);
 
   const scrollTop = () => {
@@ -30,63 +31,86 @@ export default function PendingRequest({ navigation }: any) {
   };
 
   const getPendingAppointmentList = async () => {
-    const res = await getData(`employee/appointment/pending?page=${currentPage}`, auth.token!);
-    setTotalPages(res.data.last_page);
-    dispatch({ type: 'PENDINGAPPOINTMENTLIST', payload: res.data.data });
+    dispatch({ type: ACTIONS.LOADING, payload: true });
+    try {
+      const res = await getData(`employee/appointment/pending?page=${currentPage}`, auth.token!);
+      if (res.data) {
+        setTotalPages(res.data.last_page || 1);
+        dispatch({ type: 'PENDINGAPPOINTMENTLIST', payload: res.data.data || [] });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+    dispatch({ type: ACTIONS.LOADING, payload: false });
     scrollTop();
   };
 
-  const statusBG = (status: string) => {
+  const statusColor = (status: string) => {
     switch (status) {
-      case 'Pending':
-        return 'grey';
-      case 'Rejected':
-        return 'red';
-      case 'Pending confirmation':
-        return '#FFF';
-      default:
-        return 'green';
+      case 'Pending': return '#9E9E9E';
+      case 'Rejected': return '#FF5252';
+      case 'Pending confirmation': return '#FF9800';
+      default: return '#4CAF50';
     }
   };
 
   useEffect(() => {
-    if (isFocused) {
-      getPendingAppointmentList();
-    }
+    if (isFocused) getPendingAppointmentList();
   }, [isFocused, currentPage]);
 
+  if (!state.loading && pendingAppointmentList.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Icon name="clipboard-outline" size={80} color="#DDD" />
+        <Text style={{ marginTop: 10, color: '#999', fontSize: 16 }}>
+          {language === 'EN' ? 'No Pending Requests' : 'কোনো পেন্ডিং আবেদন নেই'}
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView ref={scrollRef}>
+    <ScrollView 
+      ref={scrollRef} 
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 30, paddingTop: 10 }}
+    >
       {pendingAppointmentList.map((item: any, index: number) => (
         <TouchableOpacity
           key={index}
           style={styles.card}
-          onPress={() =>
-            navigation.navigate('EmployeeAppointmentDetails', {
-              appointmentDetails: item,
-            })
-          }
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('EmployeeAppointmentDetails', { appointmentDetails: item })}
         >
-          <View style={styles.leftColumn}>
-            <Text style={[styles.statusBadge, { backgroundColor: statusBG(item.status) }]}>
-              {item.status !== 'Pending confirmation' ? item.status : ''}
-            </Text>
-            <Text style={styles.day}>{moment(item.request.day).format('DD')}</Text>
-            <Text style={styles.month}>{moment(item.request.day).format('MMM').toUpperCase()}</Text>
-            <Text style={styles.time}>
-              {moment(item.request.time, 'HH:mm').format('HH:mm A')}
-            </Text>
+          <View style={styles.topRow}>
+            <Image 
+              style={styles.avatar} 
+              source={item.from?.image ? { uri: item.from.image } : sample_profile_avatar} 
+            />
+            <View style={styles.nameContainer}>
+              <Text style={styles.name}>{item.from?.name || 'Unknown Visitor'}</Text>
+              <Text style={styles.phoneText}>{item.from?.phone}</Text>
+            </View>
           </View>
 
-          <View style={styles.rightColumn}>
-            <Image style={styles.avatar} source={sample_profile_avatar} />
-            <View style={styles.info}>
-              <Text style={styles.name}>{item.from.name}</Text>
-              <Text style={styles.phone}>{item.from.phone}</Text>
-              <Text style={styles.type}>{item.from.type}</Text>
-              {item.status === 'Pending confirmation' && (
-                <Text style={styles.pending}>{item.status}</Text>
-              )}
+          <View style={styles.divider} />
+
+          <View style={styles.bottomRow}>
+            <View style={styles.statusWrapper}>
+               <View style={[styles.statusDot, { backgroundColor: statusColor(item.status) }]} />
+               <Text style={[styles.statusText, { color: statusColor(item.status) }]}>{item.status}</Text>
+            </View>
+
+            <View style={styles.dateTimeWrapper}>
+               <Icon name="calendar-outline" size={14} color="#D32F2F" />
+               <Text style={styles.dateText}>
+                 {moment(item.request.day, ['DD MMMM, YYYY', 'YYYY-MM-DD']).format('DD MMM')}
+               </Text>
+               <View style={styles.verticalSeparator} />
+               <Icon name="time-outline" size={14} color="#666" />
+               <Text style={styles.timeText}>
+                 {moment(item.request.time, 'HH:mm').format('hh:mm A')}
+               </Text>
             </View>
           </View>
         </TouchableOpacity>
@@ -94,81 +118,42 @@ export default function PendingRequest({ navigation }: any) {
 
       {totalPages > 1 && (
         <View style={styles.pagination}>
-          <Pagination
-            totalPages={totalPages}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-          />
+          <Pagination totalPages={totalPages} currentPage={currentPage} setCurrentPage={setCurrentPage} />
         </View>
       )}
     </ScrollView>
   );
 }
 
+// Shared Styles for Consistency
 const styles = StyleSheet.create({
+  emptyContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: '#F8F9FA' 
+  },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   card: {
-    marginVertical: 10,
-    marginHorizontal: 10,
-    padding: 10,
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    flexDirection: 'row',
+    marginVertical: 8, marginHorizontal: 16, padding: 16,
+    backgroundColor: '#FFF', borderRadius: 16,
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 }, android: { elevation: 3 } }),
+    borderWidth: 1, borderColor: '#F0F0F0',
   },
-  leftColumn: {
-    width: '30%',
-    borderRightWidth: 1,
-    borderRightColor: 'green',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingRight: 5,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    color: '#FFF',
-    borderRadius: 6,
-    fontSize: 14,
-  },
-  day: {
-    fontWeight: 'bold',
-    fontSize: 24,
-    color: 'red',
-  },
-  month: {
-    fontWeight: 'bold',
-    fontSize: 24,
-    color: 'red',
-  },
-  time: { fontSize: 16 },
-  rightColumn: {
-    width: '70%',
-    marginLeft: 15,
-    flexDirection: 'row',
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-  },
-  info: {
-    marginLeft: 10,
-    flex: 1,
-  },
-  name: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'green',
-  },
-  phone: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: 'red',
-  },
-  type: { fontSize: 14, marginTop: 10 },
-  pending: {
-    fontSize: 14,
-    marginTop: 5,
-    color: 'red',
-  },
-  pagination: {
-    marginBottom: 10,
-  },
+  topRow: { flexDirection: 'row', alignItems: 'center' },
+  avatar: { width: 55, height: 55, borderRadius: 27.5, backgroundColor: '#F0F0F0' },
+  nameContainer: { marginLeft: 12, flex: 1 },
+  name: { fontSize: 17, fontWeight: '700', color: '#2E7D32' },
+  phoneText: { fontSize: 13, color: '#D32F2F', fontWeight: '600', marginTop: 2 },
+  typeBadge: { fontSize: 11, color: '#757575', backgroundColor: '#F5F5F5', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginTop: 4 },
+  divider: { height: 1, backgroundColor: '#F0F0F0', marginVertical: 12 },
+  bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  statusWrapper: { flexDirection: 'row', alignItems: 'center' },
+  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
+  statusText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
+  dateTimeWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FAFAFA', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  dateText: { fontSize: 12, fontWeight: 'bold', color: '#D32F2F', marginLeft: 4 },
+  verticalSeparator: { width: 1, height: 12, backgroundColor: '#DDD', marginHorizontal: 8 },
+  timeText: { fontSize: 12, color: '#444', marginLeft: 4 },
+  pagination: { marginTop: 10, paddingBottom: 20 },
 });

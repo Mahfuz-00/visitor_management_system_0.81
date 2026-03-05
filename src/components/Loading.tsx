@@ -4,17 +4,20 @@ import { DataContext } from '../store/GlobalState';
 
 export function Loading() {
   const { state } = useContext(DataContext)!;
-  const { loading } = state;
+  const { loading, language } = state;
 
+  // ✅ Don't render if not loading
   if (!loading) return null;
 
+  const isBN = language === 'BN';
+
   return (
-    <View style={StyleSheet.absoluteFill}>
-      <View style={styles.overlay}>
-        <View style={styles.container}>
-          <ActivityIndicator color="black" />
-          <Text style={styles.text}>Loading...</Text>
-        </View>
+    <View style={styles.overlay}>
+      <View style={styles.container}>
+        <ActivityIndicator color="#1B5E20" size="large" />
+        <Text style={styles.text}>
+          {isBN ? 'লোড হচ্ছে...' : 'Loading...'}
+        </Text>
       </View>
     </View>
   );
@@ -23,20 +26,28 @@ export function Loading() {
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.8)',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 9999,      
+    elevation: 10,     
   },
   container: {
     backgroundColor: 'white',
     flexDirection: 'row',
-    padding: 20,
-    borderRadius: 8,
+    paddingVertical: 20,
+    paddingHorizontal: 30,
+    borderRadius: 15,
     alignItems: 'center',
+    // Modern Shadow
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
   },
   text: {
-    marginLeft: 16,
+    marginLeft: 15,
     fontSize: 18,
-    fontWeight: '500',
+    fontWeight: '600',
+    color: '#1B5E20', 
   },
 });

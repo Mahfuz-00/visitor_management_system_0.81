@@ -16,7 +16,7 @@ interface State {
   notify: Record<string, any>;
   auth: AuthPayload;
   loading: boolean;
-  language: 'en' | 'bn';
+  language: 'EN' | 'BN';
   pendingAppointmentList: any[];
 }
 
@@ -33,7 +33,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     notify: {},
     auth: {},
     loading: true,
-    language: 'en',
+    language: 'EN',
     pendingAppointmentList: []
   };
 
@@ -63,6 +63,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    AsyncStorage.getItem('language').then(lang => {
+      if (lang) {
+        dispatch({ type: ACTIONS.LANGUAGE, payload: lang });
+      }
+    });
+    
     sleep(1000).then(() => {
       AsyncStorage.getItem('user').then(userStr => {
         if (userStr) {
@@ -80,16 +86,25 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const logout = async () => {
-    Alert.alert("Hey!", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "YES",
-        onPress: () => {
-          AsyncStorage.removeItem('user');
-          dispatch({ type: ACTIONS.AUTH, payload: {} });
+    const { language } = state;
+
+    Alert.alert(
+      language === 'EN' ? "Hey!" : "হেই!",
+      language === 'EN' ? "Are you sure you want to logout?" : "আপনি কি নিশ্চিত যে আপনি লগআউট করতে চান?",
+      [
+        {
+          text: language === 'EN' ? "Cancel" : "বাতিল",
+          style: "cancel"
+        },
+        {
+          text: language === 'EN' ? "YES" : "হ্যাঁ",
+          onPress: () => {
+            AsyncStorage.removeItem('user');
+            dispatch({ type: ACTIONS.AUTH, payload: {} });
+          }
         }
-      }
-    ]);
+      ]
+    );
   };
 
   return (

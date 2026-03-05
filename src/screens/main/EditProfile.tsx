@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,28 +10,21 @@ import {
 } from 'react-native';
 import { DataContext } from '../../store/GlobalState';
 import { postData, postImage, getData } from '../../utils/fetchData';
-import { AuthContainer } from '../../components/AuthContainer';
 import { Error } from '../../components/Error';
 import { Input } from '../../components/Input';
 import { FilledButton } from '../../components/FilledButton';
-import style from '../../styles/style';
-import RadioButtonRN from 'radio-buttons-react-native';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchImageLibrary } from 'react-native-image-picker';
 import sample_profile_avatar from '../../assets/sample_profile_avatar.png';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-const genderData = [
-  { label: 'Male', value: 'male' },
-  { label: 'Female', value: 'female' },
-];
-
 export default function EditProfile({ navigation }: any) {
   const { state, dispatch } = useContext(DataContext)!;
   const { auth, language } = state;
   const { user } = auth;
 
+  // Form States
   const [error, setError] = useState('');
   const [name, setName] = useState(user.name || '');
   const [email, setEmail] = useState(user.email || '');
@@ -42,49 +35,80 @@ export default function EditProfile({ navigation }: any) {
   const [presentAddress, setPresentAddress] = useState(user.address || '');
   const [formImage, setFormImage] = useState<any>(null);
 
+  // Loading & Animation States
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dots, setDots] = useState('.');
+
+  // Animation logic for dots: . -> .. -> ... -> .. -> .
+  useEffect(() => {
+    let interval: any;
+    if (isSubmitting) {
+      let step = 1;
+      interval = setInterval(() => {
+        setDots(prev => {
+          if (prev === '...') step = -1;
+          if (prev === '.') step = 1;
+          
+          if (step === 1) return prev + '.';
+          return prev.slice(0, -1);
+        });
+      }, 350);
+    } else {
+      setDots('.');
+    }
+    return () => clearInterval(interval);
+  }, [isSubmitting]);
+
   const handleSubmit = async () => {
     if (!name || !gender || !bloodGroup) {
       return setError('Required fields should not be empty');
     }
 
-    const formData = {
-      name,
-      email,
-      phone,
-      nid: nid || '',
-      gender,
-      blood_group: bloodGroup,
-      present_address: presentAddress || '',
-    };
+    setIsSubmitting(true); // Disable button & start animation
+    setError('');
 
-    dispatch({ type: 'LOADING', payload: true });
-    const res = await postData('update/profile', formData, auth.token!);
-    dispatch({ type: 'LOADING', payload: false });
+    try {
+      const formData = {
+        name,
+        email,
+        phone,
+        nid: nid || '',
+        gender,
+        blood_group: bloodGroup,
+        present_address: presentAddress || '',
+      };
 
-    if (res.errors) {
-      setError('Failed!');
-      return;
+      const res = await postData('update/profile', formData, auth.token!);
+      
+      if (res.errors) {
+        setError('Failed to update profile');
+        setIsSubmitting(false);
+        return;
+      }
+
+      await uploadImage();
+
+      const res2 = await getData('user', auth.token!);
+      const updatedUser = {
+        user: res2.data,
+        token: auth.token,
+        roles: auth.roles,
+      };
+
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      dispatch({ type: 'AUTH', payload: updatedUser });
+
+      ToastAndroid.show(res.message || 'Profile updated', ToastAndroid.LONG);
+      navigation.pop();
+    } catch (err) {
+      setError('An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false); // Re-enable button
     }
-
-    await uploadImage();
-
-    const res2 = await getData('user', auth.token!);
-    const updatedUser = {
-      user: res2.data,
-      token: auth.token,
-      roles: auth.roles,
-    };
-
-    await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
-    dispatch({ type: 'AUTH', payload: updatedUser });
-
-    ToastAndroid.show(res.message || 'Profile updated', ToastAndroid.LONG);
-    navigation.pop();
   };
 
   const uploadImage = async () => {
     if (!formImage?.assets?.[0]) return;
-
     const image = formImage.assets[0];
     const form = new FormData();
     form.append('image', {
@@ -92,23 +116,21 @@ export default function EditProfile({ navigation }: any) {
       type: image.type,
       name: image.fileName,
     });
-
     await postImage('update/profile/image', form, auth.token!);
   };
 
   const openGallery = async () => {
-    const result = await launchImageLibrary({ mediaType: 'photo', maxWidth: 200, maxHeight: 200 });
+    const result = await launchImageLibrary({ mediaType: 'photo', maxWidth: 300, maxHeight: 300 });
     if (!result.didCancel && result.assets?.[0]) {
       setFormImage(result);
     }
   };
 
   return (
-    <AuthContainer>
-      <Error error={error} />
-      <ScrollView>
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 0 }}>
+        <View style={styles.header}>
+          <View style={styles.avatarWrapper}>
             <Image
               style={styles.avatarImg}
               source={
@@ -119,80 +141,193 @@ export default function EditProfile({ navigation }: any) {
                   : sample_profile_avatar
               }
             />
+            <TouchableOpacity style={styles.cameraOverlay} onPress={openGallery} disabled={isSubmitting}>
+              <Icon name="camera" size={20} color="#FFF" />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.cameraBtn} onPress={openGallery}>
-            <Icon name="ios-camera-outline" size={30} color="black" />
-          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{language === 'BN' ? 'প্রোফাইল আপডেট করুন' : 'Update Profile'}</Text>
         </View>
 
-        <Text style={style.formLebel}>{language === 'bn' ? 'নাম' : 'Name'}:</Text>
-        <Input style={styles.input} value={name} onChangeText={setName} />
+        <View style={styles.formCard}>
+          <Error error={error} />
 
-        <Text style={style.formLebel}>{language === 'bn' ? 'ইমেইল (ঐচ্ছিক)' : 'Email (optional)'}:</Text>
-        <Input style={styles.input} value={email} onChangeText={setEmail} />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{language === 'BN' ? 'নাম' : 'Name'}</Text>
+            <Input style={styles.inputStyle} value={name} onChangeText={setName} editable={!isSubmitting} />
+          </View>
 
-        <Text style={style.formLebel}>{language === 'bn' ? 'ফোন' : 'Phone'}:</Text>
-        <Input style={styles.input} value={phone} onChangeText={setPhone} />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{language === 'BN' ? 'ইমেইল' : 'Email'}</Text>
+            <Input style={styles.inputStyle} value={email} onChangeText={setEmail} editable={!isSubmitting} keyboardType="email-address" />
+          </View>
 
-        <Text style={style.formLebel}>{language === 'bn' ? 'এনআইডি (ঐচ্ছিক)' : 'NID (optional)'}:</Text>
-        <Input style={styles.input} value={nid} onChangeText={setNid} />
+          <View style={styles.formRow}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+              <Text style={styles.label}>{language === 'BN' ? 'ফোন' : 'Phone'}</Text>
+              <Input style={styles.inputStyle} value={phone} onChangeText={setPhone} editable={!isSubmitting} keyboardType="phone-pad" />
+            </View>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>{language === 'BN' ? 'রক্তের গ্রুপ' : 'Blood Group'}</Text>
+              <View style={[styles.pickerContainer, isSubmitting && { opacity: 0.5 }]}>
+                <Picker selectedValue={bloodGroup} onValueChange={setBloodGroup} enabled={!isSubmitting}>
+                  <Picker.Item label="Select" value="" color="#999" />
+                  {['A+', 'B+', 'AB+', 'O+', 'A-', 'B-', 'AB-', 'O-'].map(g => (
+                    <Picker.Item key={g} label={g} value={g} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          </View>
 
-        <Text style={style.formLebel}>{language === 'bn' ? 'লিঙ্গ' : 'Gender'}:</Text>
-        <RadioButtonRN
-          data={genderData}
-          selectedBtn={(e: any) => setGender(e.value)}
-          initial={gender === 'female' ? 2 : 1}
-          style={styles.radioRow}
-          boxStyle={styles.radioBox}
-        />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{language === 'BN' ? 'এনআইডি' : 'NID'}</Text>
+            <Input style={styles.inputStyle} value={nid} onChangeText={setNid} editable={!isSubmitting} />
+          </View>
 
-        <Text style={style.formLebel}>{language === 'bn' ? 'রক্তের গ্রুপ' : 'Blood Group'}:</Text>
-        <Picker
-          selectedValue={bloodGroup}
-          style={styles.picker}
-          onValueChange={setBloodGroup}
-        >
-          <Picker.Item label="Select blood group" value="" />
-          {['A+', 'B+', 'AB+', 'O+', 'A-', 'B-', 'AB-', 'O-'].map(g => (
-            <Picker.Item key={g} label={g} value={g} />
-          ))}
-        </Picker>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{language === 'BN' ? 'লিঙ্গ' : 'Gender'}</Text>
+            <View style={styles.genderToggle}>
+              <TouchableOpacity 
+                style={[styles.genderBtn, gender === 'male' && styles.genderBtnActive]} 
+                onPress={() => !isSubmitting && setGender('male')}
+              >
+                <Icon name="male" size={18} color={gender === 'male' ? '#FFF' : '#666'} />
+                <Text style={[styles.genderBtnText, gender === 'male' && { color: '#FFF' }]}>Male</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.genderBtn, gender === 'female' && styles.genderBtnActive]} 
+                onPress={() => !isSubmitting && setGender('female')}
+              >
+                <Icon name="female" size={18} color={gender === 'female' ? '#FFF' : '#666'} />
+                <Text style={[styles.genderBtnText, gender === 'female' && { color: '#FFF' }]}>Female</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
-        <Text style={style.formLebel}>{language === 'bn' ? 'বর্তমান ঠিকানা (ঐচ্ছিক)' : 'Present Address (optional)'}:</Text>
-        <Input style={styles.input} value={presentAddress} onChangeText={setPresentAddress} />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{language === 'BN' ? 'বর্তমান ঠিকানা' : 'Present Address'}</Text>
+            <Input 
+                value={presentAddress} 
+                onChangeText={setPresentAddress} 
+                multiline 
+                editable={!isSubmitting}
+            />
+          </View>
 
-        <FilledButton
-          title={language === 'bn' ? 'আপডেট' : 'UPDATE'}
-          style={styles.loginButton}
-          onPress={handleSubmit}
-        />
+          {/* CUSTOM LOADING BUTTON */}
+          <TouchableOpacity 
+            style={[styles.submitBtn, isSubmitting && styles.disabledBtn]} 
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.btnText}>Loading</Text>
+                {/* Fixed width container for dots ensures the text doesn't shift */}
+                <View style={styles.dotsContainer}>
+                  <Text style={styles.btnText}>{dots}</Text>
+                </View>
+              </View>
+            ) : (
+              <Text style={styles.btnText}>
+                {language === 'BN' ? 'আপডেট করুন' : 'SAVE CHANGES'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </ScrollView>
-    </AuthContainer>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  avatarContainer: { alignItems: 'center', marginVertical: 20 },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'green',
-    elevation: 5,
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  header: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    backgroundColor: '#FFF',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 2,
   },
-  avatarImg: { width: '100%', height: '100%' },
-  cameraBtn: {
+  avatarWrapper: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: '#E8F5E9' },
+  avatarImg: { width: '100%', height: '100%', borderRadius: 55 },
+  cameraOverlay: {
     position: 'absolute',
-    bottom: -15,
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 5,
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'green',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#FFF',
   },
-  input: { marginVertical: 8 },
-  loginButton: { marginVertical: 20 },
-  radioRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 10 },
-  radioBox: { width: '45%' },
-  picker: { height: 50, backgroundColor: '#e8e8e8', borderRadius: 8, marginVertical: 10 },
+  headerTitle: { fontSize: 18, fontWeight: '800', marginTop: 15, color: '#333' },
+  formCard: {
+    margin: 16,
+    padding: 20,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    elevation: 3,
+  },
+  inputGroup: { marginBottom: 15 },
+  formRow: { flexDirection: 'row' },
+  label: { fontSize: 13, fontWeight: '700', color: '#555', marginBottom: 8, marginLeft: 4 },
+  inputStyle: {
+    backgroundColor: '#F9F9F9',
+    borderWidth: 1,
+    borderColor: '#EEE',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    height: 50,
+  },
+  pickerContainer: {
+    backgroundColor: '#F9F9F9',
+    borderWidth: 1,
+    borderColor: '#EEE',
+    borderRadius: 12,
+    height: 50,
+    justifyContent: 'center',
+  },
+  genderToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#F9F9F9',
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: '#EEE',
+  },
+  genderBtn: { flex: 1, flexDirection: 'row', height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 10 },
+  genderBtnActive: { backgroundColor: 'green' },
+  genderBtnText: { marginLeft: 8, fontSize: 14, fontWeight: '600', color: '#666' },
+  
+  // BUTTON STYLES
+  submitBtn: {
+    backgroundColor: 'green',
+    borderRadius: 12,
+    height: 55,
+    marginTop: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disabledBtn: {
+    backgroundColor: '#A5D6A7', // Lighter green when disabled
+  },
+  btnText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 15,
+    letterSpacing: 0.5,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dotsContainer: {
+    width: 30, // Fixed width prevents "Loading" text from shifting
+    marginLeft: 2,
+  }
 });

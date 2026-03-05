@@ -83,7 +83,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
     }
     signingConfigs {
         debug {
@@ -93,6 +93,14 @@ android {
             keyPassword 'android'
         }
     }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "BTRC_ePass_v${defaultConfig.versionCode}_${defaultConfig.versionName}.apk"
+        }
+    }
+
+
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
