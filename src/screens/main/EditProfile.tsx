@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect, useRef } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,7 @@ import { DataContext } from '../../store/GlobalState';
 import { postData, postImage, getData } from '../../utils/fetchData';
 import { Error } from '../../components/Error';
 import { Input } from '../../components/Input';
-import { FilledButton } from '../../components/FilledButton';
-import { Picker } from '@react-native-picker/picker';
+import { CustomPicker } from '../../components/Picker'; // ✅ Integrated Custom Picker
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchImageLibrary } from 'react-native-image-picker';
 import sample_profile_avatar from '../../assets/sample_profile_avatar.png';
@@ -39,7 +38,18 @@ export default function EditProfile({ navigation }: any) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dots, setDots] = useState('.');
 
-  // Animation logic for dots: . -> .. -> ... -> .. -> .
+  const bloodGroupItems = [
+    { id: 'A+', name: 'A+' },
+    { id: 'B+', name: 'B+' },
+    { id: 'AB+', name: 'AB+' },
+    { id: 'O+', name: 'O+' },
+    { id: 'A-', name: 'A-' },
+    { id: 'B-', name: 'B-' },
+    { id: 'AB-', name: 'AB-' },
+    { id: 'O-', name: 'O-' },
+  ];
+
+  // Animation logic for dots
   useEffect(() => {
     let interval: any;
     if (isSubmitting) {
@@ -48,7 +58,6 @@ export default function EditProfile({ navigation }: any) {
         setDots(prev => {
           if (prev === '...') step = -1;
           if (prev === '.') step = 1;
-          
           if (step === 1) return prev + '.';
           return prev.slice(0, -1);
         });
@@ -61,10 +70,10 @@ export default function EditProfile({ navigation }: any) {
 
   const handleSubmit = async () => {
     if (!name || !gender || !bloodGroup) {
-      return setError('Required fields should not be empty');
+      return setError(language === 'BN' ? 'প্রয়োজনীয় তথ্য পূরণ করুন' : 'Required fields should not be empty');
     }
 
-    setIsSubmitting(true); // Disable button & start animation
+    setIsSubmitting(true);
     setError('');
 
     try {
@@ -81,7 +90,7 @@ export default function EditProfile({ navigation }: any) {
       const res = await postData('update/profile', formData, auth.token!);
       
       if (res.errors) {
-        setError('Failed to update profile');
+        setError(language === 'BN' ? 'প্রোফাইল আপডেট করতে ব্যর্থ হয়েছে' : 'Failed to update profile');
         setIsSubmitting(false);
         return;
       }
@@ -98,12 +107,12 @@ export default function EditProfile({ navigation }: any) {
       await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
       dispatch({ type: 'AUTH', payload: updatedUser });
 
-      ToastAndroid.show(res.message || 'Profile updated', ToastAndroid.LONG);
+      ToastAndroid.show(res.message || (language === 'BN' ? 'প্রোফাইল আপডেট হয়েছে' : 'Profile updated'), ToastAndroid.LONG);
       navigation.pop();
     } catch (err) {
-      setError('An unexpected error occurred');
+      setError(language === 'BN' ? 'একটি অপ্রত্যাশিত ত্রুটি ঘটেছে' : 'An unexpected error occurred');
     } finally {
-      setIsSubmitting(false); // Re-enable button
+      setIsSubmitting(false);
     }
   };
 
@@ -115,7 +124,7 @@ export default function EditProfile({ navigation }: any) {
       uri: image.uri,
       type: image.type,
       name: image.fileName,
-    });
+    } as any);
     await postImage('update/profile/image', form, auth.token!);
   };
 
@@ -128,7 +137,7 @@ export default function EditProfile({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 0 }}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.avatarWrapper}>
             <Image
@@ -153,35 +162,33 @@ export default function EditProfile({ navigation }: any) {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{language === 'BN' ? 'নাম' : 'Name'}</Text>
-            <Input style={styles.inputStyle} value={name} onChangeText={setName} editable={!isSubmitting} />
+            <Input value={name} onChangeText={setName} editable={!isSubmitting} />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{language === 'BN' ? 'ইমেইল' : 'Email'}</Text>
-            <Input style={styles.inputStyle} value={email} onChangeText={setEmail} editable={!isSubmitting} keyboardType="email-address" />
+            <Input value={email} onChangeText={setEmail} editable={!isSubmitting} keyboardType="email-address" />
           </View>
 
           <View style={styles.formRow}>
             <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
               <Text style={styles.label}>{language === 'BN' ? 'ফোন' : 'Phone'}</Text>
-              <Input style={styles.inputStyle} value={phone} onChangeText={setPhone} editable={!isSubmitting} keyboardType="phone-pad" />
+              <Input value={phone} onChangeText={setPhone} editable={!isSubmitting} keyboardType="phone-pad" />
             </View>
             <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>{language === 'BN' ? 'রক্তের গ্রুপ' : 'Blood Group'}</Text>
-              <View style={[styles.pickerContainer, isSubmitting && { opacity: 0.5 }]}>
-                <Picker selectedValue={bloodGroup} onValueChange={setBloodGroup} enabled={!isSubmitting}>
-                  <Picker.Item label="Select" value="" color="#999" />
-                  {['A+', 'B+', 'AB+', 'O+', 'A-', 'B-', 'AB-', 'O-'].map(g => (
-                    <Picker.Item key={g} label={g} value={g} />
-                  ))}
-                </Picker>
-              </View>
+               <CustomPicker
+                label={language === 'BN' ? 'রক্তের গ্রুপ' : 'Blood Group'}
+                placeholder="Select"
+                selectedValue={bloodGroup}
+                onValueChange={setBloodGroup}
+                items={bloodGroupItems}
+              />
             </View>
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{language === 'BN' ? 'এনআইডি' : 'NID'}</Text>
-            <Input style={styles.inputStyle} value={nid} onChangeText={setNid} editable={!isSubmitting} />
+            <Input value={nid} onChangeText={setNid} editable={!isSubmitting} />
           </View>
 
           <View style={styles.inputGroup}>
@@ -211,10 +218,10 @@ export default function EditProfile({ navigation }: any) {
                 onChangeText={setPresentAddress} 
                 multiline 
                 editable={!isSubmitting}
+                style={styles.textArea}
             />
           </View>
 
-          {/* CUSTOM LOADING BUTTON */}
           <TouchableOpacity 
             style={[styles.submitBtn, isSubmitting && styles.disabledBtn]} 
             onPress={handleSubmit}
@@ -223,7 +230,6 @@ export default function EditProfile({ navigation }: any) {
             {isSubmitting ? (
               <View style={styles.loadingContainer}>
                 <Text style={styles.btnText}>Loading</Text>
-                {/* Fixed width container for dots ensures the text doesn't shift */}
                 <View style={styles.dotsContainer}>
                   <Text style={styles.btnText}>{dots}</Text>
                 </View>
@@ -272,26 +278,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 20,
     elevation: 3,
+    marginBottom: 30
   },
   inputGroup: { marginBottom: 15 },
   formRow: { flexDirection: 'row' },
   label: { fontSize: 13, fontWeight: '700', color: '#555', marginBottom: 8, marginLeft: 4 },
-  inputStyle: {
-    backgroundColor: '#F9F9F9',
-    borderWidth: 1,
-    borderColor: '#EEE',
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    height: 50,
-  },
-  pickerContainer: {
-    backgroundColor: '#F9F9F9',
-    borderWidth: 1,
-    borderColor: '#EEE',
-    borderRadius: 12,
-    height: 50,
-    justifyContent: 'center',
-  },
   genderToggle: {
     flexDirection: 'row',
     backgroundColor: '#F9F9F9',
@@ -303,8 +294,10 @@ const styles = StyleSheet.create({
   genderBtn: { flex: 1, flexDirection: 'row', height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 10 },
   genderBtnActive: { backgroundColor: 'green' },
   genderBtnText: { marginLeft: 8, fontSize: 14, fontWeight: '600', color: '#666' },
-  
-  // BUTTON STYLES
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
   submitBtn: {
     backgroundColor: 'green',
     borderRadius: 12,
@@ -314,7 +307,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   disabledBtn: {
-    backgroundColor: '#A5D6A7', // Lighter green when disabled
+    backgroundColor: '#A5D6A7',
   },
   btnText: {
     color: '#FFF',
@@ -327,7 +320,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dotsContainer: {
-    width: 30, // Fixed width prevents "Loading" text from shifting
+    width: 30,
     marginLeft: 2,
   }
 });

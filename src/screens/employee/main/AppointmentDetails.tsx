@@ -18,7 +18,7 @@ import { Heading } from '../../../components/Heading';
 import { Error } from '../../../components/Error';
 import { Input } from '../../../components/Input';
 import { FilledButton } from '../../../components/FilledButton';
-import { Picker } from '@react-native-picker/picker';
+import { CustomPicker } from '../../../components/Picker'; 
 import DatePicker from 'react-native-date-picker';
 import sample_profile_avatar from '../../../assets/sample_profile_avatar.png';
 import { ACTIONS } from '../../../store/Actions';
@@ -26,7 +26,7 @@ import { ACTIONS } from '../../../store/Actions';
 export default function AppointmentDetails({ route, navigation }: any) {
   const [appointmentDetails, setAppointmentDetails] = useState(route.params?.appointmentDetails || {});
   const { state, dispatch } = useContext(DataContext)!;
-  const { auth, language } = state; // ✅ Destructured language
+  const { auth, language } = state;
 
   const [error, setError] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -34,7 +34,7 @@ export default function AppointmentDetails({ route, navigation }: any) {
   const [openDatePicker, setOpenDatePicker] = useState(false);
   const [openTimePicker, setOpenTimePicker] = useState(false);
 
-  const [durations, setDurations] = useState<Record<string, string>>({});
+  const [durations, setDurations] = useState<any[]>([]);
   const [meetingDate, setMeetingDate] = useState(new Date());
   const [meetingTime, setMeetingTime] = useState(new Date());
   const [meetingDuration, setMeetingDuration] = useState('');
@@ -106,7 +106,14 @@ export default function AppointmentDetails({ route, navigation }: any) {
   useEffect(() => {
     const getDurations = async () => {
       const res = await getData('appointment/durations', auth.token!);
-      if (res.data) setDurations(res.data);
+      if (res.data) {
+        // Convert object { "30": "30 Min" } to array [{ id: "30", name: "30 Min" }]
+        const formattedDurations = Object.entries(res.data).map(([id, name]) => ({
+          id,
+          name: name as string
+        }));
+        setDurations(formattedDurations);
+      }
     };
     getDurations();
   }, []);
@@ -179,19 +186,21 @@ export default function AppointmentDetails({ route, navigation }: any) {
               <Text style={styles.formLabel}>{language === 'EN' ? 'Date & Time' : 'তারিখ ও সময়'}</Text>
               <View style={styles.formRow}>
                 <TouchableOpacity style={[styles.inputContainer, { flex: 1, marginRight: 5 }]} onPress={() => setOpenDatePicker(true)}>
-                  <Text>{moment(meetingDate).format('YYYY-MM-DD')}</Text>
+                  <Text style={{color: 'black'}}>{moment(meetingDate).format('YYYY-MM-DD')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.inputContainer, { flex: 1 }]} onPress={() => setOpenTimePicker(true)}>
-                  <Text>{moment(meetingTime).format('hh:mm A')}</Text>
+                  <Text style={{color: 'black'}}>{moment(meetingTime).format('hh:mm A')}</Text>
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.formLabel}>{language === 'EN' ? 'Duration' : 'সময়সীমা'}</Text>
-              <View style={styles.pickerWrapper}>
-                <Picker selectedValue={meetingDuration} onValueChange={(v) => setMeetingDuration(v)}>
-                  <Picker.Item label={language === 'EN' ? "Select Duration" : "সময়সীমা নির্বাচন করুন"} value="" />
-                  {Object.entries(durations).map(([v, l]) => <Picker.Item key={v} label={l} value={v} />)}
-                </Picker>
+              <View style={{marginTop: 10}}>
+                 <CustomPicker
+                    label={language === 'EN' ? 'Duration' : 'সময়সীমা'}
+                    placeholder={language === 'EN' ? "Select Duration" : "সময়সীমা নির্বাচন করুন"}
+                    selectedValue={meetingDuration}
+                    onValueChange={(v) => setMeetingDuration(v)}
+                    items={durations}
+                 />
               </View>
 
               <Text style={styles.formLabel}>{language === 'EN' ? 'Note (Optional)' : 'নোট (ঐচ্ছিক)'}</Text>
@@ -266,7 +275,6 @@ const styles = StyleSheet.create({
   formLabel: { fontSize: 12, color: '#666', marginBottom: 5, marginTop: 10 },
   formRow: { flexDirection: 'row', justifyContent: 'space-between' },
   inputContainer: { borderWidth: 1, borderColor: '#DDD', borderRadius: 8, paddingHorizontal: 10, height: 45, justifyContent: 'center' },
-  pickerWrapper: { borderWidth: 1, borderColor: '#DDD', borderRadius: 8, height: 45, justifyContent: 'center' },
   reviewNoteInput: {
     height: 65,
     textAlignVertical: 'top',
@@ -274,6 +282,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9F9F9',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#DDD'
+    borderColor: '#DDD',
+    color: 'black'
   }
 });

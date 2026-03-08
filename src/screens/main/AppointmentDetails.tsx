@@ -18,7 +18,7 @@ import { Heading } from '../../components/Heading';
 import { Error } from '../../components/Error';
 import { Input } from '../../components/Input';
 import { FilledButton } from '../../components/FilledButton';
-import { Picker } from '@react-native-picker/picker';
+import { CustomPicker } from '../../components/Picker'; 
 import DatePicker from 'react-native-date-picker';
 import sample_profile_avatar from '../../assets/sample_profile_avatar.png';
 import { SvgUri } from 'react-native-svg';
@@ -26,15 +26,15 @@ import { SvgUri } from 'react-native-svg';
 export default function AppointmentDetails({ route, navigation }: any) {
   const [appointmentDetails, setAppointmentDetails] = useState(route.params.appointmentDetails);
   const { state, dispatch } = useContext(DataContext)!;
-  const { auth, language } = state; // ✅ Destructured language
+  const { auth, language } = state;
 
   const [error, setError] = useState('');
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [openDatePicker, setOpenDatePicker] = useState(false);
   const [openTimePicker, setOpenTimePicker] = useState(false);
 
-  const [purposes, setPurposes] = useState<string[]>([]);
-  const [durations, setDurations] = useState<Record<string, string>>({});
+  const [purposes, setPurposes] = useState<any[]>([]);
+  const [durations, setDurations] = useState<any[]>([]);
 
   const [personId, setPersonId] = useState('');
   const [personName, setPersonName] = useState('');
@@ -67,7 +67,7 @@ export default function AppointmentDetails({ route, navigation }: any) {
     const res = await postData(`appointment/update/${appointmentDetails.id}`, formData, auth.token!);
     dispatch({ type: 'LOADING', payload: false });
     if (res.errorMessage) { ToastAndroid.show(res.errorMessage, ToastAndroid.LONG); return; }
-    ToastAndroid.show(language === 'EN' ? 'Updated!' : 'আপডেট করা হয়েছে!', ToastAndroid.LONG);
+    ToastAndroid.show(language === 'EN' ? 'Updated!' : 'আপডেট করা হয়েছে!', ToastAndroid.LONG);
     setShowUpdateModal(false);
     navigation.pop();
   };
@@ -77,7 +77,7 @@ export default function AppointmentDetails({ route, navigation }: any) {
     const res = await getData(`appointment/delete/${appointmentDetails.id}`, auth.token!);
     dispatch({ type: 'LOADING', payload: false });
     if (res.errorMessage) { ToastAndroid.show(res.errorMessage, ToastAndroid.LONG); return; }
-    ToastAndroid.show(res.successMessage || (language === 'EN' ? 'Deleted!' : 'মুছে ফেলা হয়েছে!'), ToastAndroid.LONG);
+    ToastAndroid.show(res.successMessage || (language === 'EN' ? 'Deleted!' : 'মুছে ফেলা হয়েছে!'), ToastAndroid.LONG);
     navigation.pop();
   };
 
@@ -86,7 +86,7 @@ export default function AppointmentDetails({ route, navigation }: any) {
     const res = await getData(`appointment/${appointmentDetails.id}/action/${action}`, auth.token!);
     dispatch({ type: 'LOADING', payload: false });
     if (res.errorMessage) { ToastAndroid.show(res.errorMessage, ToastAndroid.LONG); return; }
-    ToastAndroid.show(res.successMessage || (language === 'EN' ? 'Success' : 'সফল হয়েছে'), ToastAndroid.LONG);
+    ToastAndroid.show(res.successMessage || (language === 'EN' ? 'Success' : 'সফল হয়েছে'), ToastAndroid.LONG);
     setAppointmentDetails({ ...appointmentDetails, status: action === 'accept' ? 'Approved' : 'Rejected' });
   };
 
@@ -102,24 +102,33 @@ export default function AppointmentDetails({ route, navigation }: any) {
   };
 
   const handleOnShowUpdateModal = () => {
+    setError('');
     setPersonId(appointmentDetails.to.id);
     setPersonName(appointmentDetails.to.name);
-    setNoOfPerson(appointmentDetails.number_of_person);
+    setNoOfPerson(appointmentDetails.number_of_person.toString());
     setMeetingDate(moment(appointmentDetails.meeting.day, 'DD MMMM, YYYY').toDate());
     setMeetingTime(moment(appointmentDetails.meeting.time, 'HH:mm A').toDate());
-    setMeetingDuration(Object.keys(durations).find(k => durations[k] === appointmentDetails.meeting.duration) || '');
+    
+    // Logic to find the ID based on the duration label coming from details
+    const foundDur = durations.find(d => d.name === appointmentDetails.meeting.duration);
+    setMeetingDuration(foundDur ? foundDur.id : '');
+    
     setPurpose(appointmentDetails.purpose);
     setNote(appointmentDetails.meeting.note || '');
   };
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchSelectData = async () => {
       const resD = await getData('appointment/durations', auth.token!);
-      setDurations(resD.data || {});
+      if(resD.data) {
+        setDurations(Object.entries(resD.data).map(([id, name]) => ({ id, name: name as string })));
+      }
       const resP = await getData('appointment/purposes', auth.token!);
-      setPurposes(resP.data || []);
+      if(resP.data) {
+        setPurposes(resP.data.map((p: string) => ({ id: p, name: p })));
+      }
     };
-    fetchData();
+    fetchSelectData();
   }, []);
 
   return (
@@ -141,8 +150,8 @@ export default function AppointmentDetails({ route, navigation }: any) {
           <View style={styles.infoCard}>
             {[
               { label: language === 'EN' ? 'Date' : 'তারিখ', value: formatDate(appointmentDetails.meeting.day), icon: 'calendar-outline' },
-              { label: language === 'EN' ? 'Time' : 'সময়', value: moment(appointmentDetails.meeting.time, 'HH:mm').format('hh:mm A'), icon: 'time-outline' },
-              { label: language === 'EN' ? 'Duration' : 'সময়সীমা', value: appointmentDetails.meeting.duration, icon: 'hourglass-outline' },
+              { label: language === 'EN' ? 'Time' : 'সময়', value: moment(appointmentDetails.meeting.time, 'HH:mm').format('hh:mm A'), icon: 'time-outline' },
+              { label: language === 'EN' ? 'Duration' : 'সময়সীমা', value: appointmentDetails.meeting.duration, icon: 'hourglass-outline' },
               { label: language === 'EN' ? 'Persons' : 'ব্যক্তি সংখ্যা', value: appointmentDetails.number_of_person, icon: 'people-outline' },
               { label: language === 'EN' ? 'Purpose' : 'উদ্দেশ্য', value: appointmentDetails.purpose, icon: 'bookmark-outline' },
               { label: language === 'EN' ? 'Note' : 'নোট', value: appointmentDetails.meeting.note || 'N/A', icon: 'chatbox-ellipses-outline' },
@@ -173,7 +182,7 @@ export default function AppointmentDetails({ route, navigation }: any) {
               )}
             </View>
             <Text style={styles.qrFooter}>
-                {language === 'EN' ? 'Scanning ensures faster check-in' : 'স্ক্যান করলে দ্রুত চেক-ইন নিশ্চিত হয়'}
+                {language === 'EN' ? 'Scanning ensures faster check-in' : 'স্ক্যান করলে দ্রুত চেক-ইন নিশ্চিত হয়'}
             </Text>
           </View>
         </View>
@@ -241,9 +250,10 @@ export default function AppointmentDetails({ route, navigation }: any) {
                   <Icon name="people" size={18} color="green" />
                   <Input
                     style={styles.formInput}
-                    value={noOfPerson.toString()}
+                    value={noOfPerson}
                     onChangeText={setNoOfPerson}
                     keyboardType="numeric"
+                    multiline={false}
                   />
                 </View>
               </View>
@@ -257,7 +267,7 @@ export default function AppointmentDetails({ route, navigation }: any) {
                   </TouchableOpacity>
                 </View>
                 <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
-                  <Text style={styles.formLabel}>{language === 'EN' ? 'Time' : 'সময়'}</Text>
+                  <Text style={styles.formLabel}>{language === 'EN' ? 'Time' : 'সময়'}</Text>
                   <TouchableOpacity style={styles.inputContainer} onPress={() => setOpenTimePicker(true)}>
                     <Icon name="time" size={18} color="green" />
                     <Text style={styles.datePickerText}>{moment(meetingTime).format('hh:mm A')}</Text>
@@ -265,26 +275,24 @@ export default function AppointmentDetails({ route, navigation }: any) {
                 </View>
               </View>
 
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>{language === 'EN' ? 'Duration' : 'সময়সীমা'}</Text>
-                <View style={styles.pickerWrapper}>
-                  <Picker selectedValue={meetingDuration} onValueChange={setMeetingDuration} dropdownIconColor="black">
-                    {Object.entries(durations).map(([value, label]) => (
-                      <Picker.Item key={value} label={label} value={value} color="black" />
-                    ))}
-                  </Picker>
-                </View>
+              <View style={{ marginBottom: 12 }}>
+                <CustomPicker
+                  label={language === 'EN' ? 'Duration' : 'সময়সীমা'}
+                  placeholder={language === 'EN' ? "Select Duration" : "সময়সীমা নির্বাচন করুন"}
+                  selectedValue={meetingDuration}
+                  onValueChange={setMeetingDuration}
+                  items={durations}
+                />
               </View>
 
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>{language === 'EN' ? 'Purpose' : 'উদ্দেশ্য'}</Text>
-                <View style={styles.pickerWrapper}>
-                  <Picker selectedValue={purpose} onValueChange={setPurpose} dropdownIconColor="black">
-                    {purposes.map((item, i) => (
-                      <Picker.Item key={i} label={item} value={item} color="black" />
-                    ))}
-                  </Picker>
-                </View>
+              <View style={{ marginBottom: 12 }}>
+                <CustomPicker
+                  label={language === 'EN' ? 'Purpose' : 'উদ্দেশ্য'}
+                  placeholder={language === 'EN' ? "Select Purpose" : "উদ্দেশ্য নির্বাচন করুন"}
+                  selectedValue={purpose}
+                  onValueChange={setPurpose}
+                  items={purposes}
+                />
               </View>
 
               <View style={styles.formGroup}>
@@ -294,8 +302,6 @@ export default function AppointmentDetails({ route, navigation }: any) {
                   value={note}
                   onChangeText={setNote}
                   multiline={true}
-                  scrollEnabled={true}
-                  numberOfLines={2}
                   maxLength={70}
                   placeholder={language === 'EN' ? 'Anything else?' : 'অন্য কিছু?'}
                 />
@@ -324,49 +330,15 @@ export default function AppointmentDetails({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FA' },
   scrollInside: { paddingTop: 16, paddingBottom: 30 },
-  cardHeader: {
-    backgroundColor: '#FFF',
-    marginHorizontal: 16,
-    paddingVertical: 25,
-    borderRadius: 16,
-    alignItems: 'center',
-    elevation: 2,
-  },
-  avatarBorder: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 2,
-    borderColor: '#E8F5E9',
-    padding: 2,
-  },
-  avatarImg: {
-    width: '100%', 
-    height: '100%', 
-    borderRadius: 45
-  },
-  userName: {
-    fontSize: 20, 
-    fontWeight: '700', 
-    color: '#333', 
-    marginTop: 12, 
-    textAlign: 'center'
-  },
-  statusTag: {
-    marginTop: 8, paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20
-  },
-  statusText: {
-    fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase'
-  },
-  infoCard: {
-    backgroundColor: '#FFF', marginHorizontal: 16, marginTop: 12, borderRadius: 16, paddingVertical: 8, elevation: 2
-  },
-  infoRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 18, borderBottomWidth: 1, borderBottomColor: '#F8F9FA'
-  },
-  labelGroup: {
-    flexDirection: 'row', alignItems: 'center', flex: 0.45
-  },
+  cardHeader: { backgroundColor: '#FFF', marginHorizontal: 16, paddingVertical: 25, borderRadius: 16, alignItems: 'center', elevation: 2 },
+  avatarBorder: { width: 90, height: 90, borderRadius: 45, borderWidth: 2, borderColor: '#E8F5E9', padding: 2 },
+  avatarImg: { width: '100%', height: '100%', borderRadius: 45 },
+  userName: { fontSize: 20, fontWeight: '700', color: '#333', marginTop: 12, textAlign: 'center' },
+  statusTag: { marginTop: 8, paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20 },
+  statusText: { fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase' },
+  infoCard: { backgroundColor: '#FFF', marginHorizontal: 16, marginTop: 12, borderRadius: 16, paddingVertical: 8, elevation: 2 },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 18, borderBottomWidth: 1, borderBottomColor: '#F8F9FA' },
+  labelGroup: { flexDirection: 'row', alignItems: 'center', flex: 0.45 },
   labelText: { fontSize: 14, color: '#666', marginLeft: 10 },
   valueText: { fontSize: 14, color: '#000', fontWeight: '700', flex: 0.55, textAlign: 'right' },
   qrCard: { backgroundColor: '#FFF', marginHorizontal: 16, marginTop: 12, borderRadius: 16, padding: 20, alignItems: 'center', elevation: 2, marginBottom: 10 },
@@ -377,69 +349,16 @@ const styles = StyleSheet.create({
   stickyFooter: { position: 'absolute', bottom: 0, width: '100%', backgroundColor: '#FFF', flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderTopWidth: 1, borderTopColor: '#EEE', elevation: 10 },
   btn: { flexDirection: 'row', height: 48, width: '48%', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   btnLabel: { color: '#FFF', fontWeight: 'bold', fontSize: 15, marginLeft: 8 },
-
-  // MODAL STYLING
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end', // Aligns form to bottom, reduces top "empty" look
-  },
-  modalContent: {
-    backgroundColor: '#FFF',
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    paddingHorizontal: 20,
-    paddingTop: 15, // Reduced top space
-    paddingBottom: 20,
-    maxHeight: '85%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 25, borderTopRightRadius: 25, paddingHorizontal: 20, paddingTop: 15, paddingBottom: 20, maxHeight: '85%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   formGroup: { marginBottom: 12 },
   formRow: { flexDirection: 'row', justifyContent: 'space-between' },
   formLabel: { fontSize: 13, color: '#555', fontWeight: '600', marginBottom: 4, marginLeft: 4 },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9F9F9',
-    borderWidth: 1,
-    borderColor: '#EEE',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 45, // Slightly slimmer inputs
-  },
-  noteContainer: {
-    height: 60, // Fixed height for 2 lines
-    alignItems: 'flex-start',
-    paddingTop: 5,
-  },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9F9F9', borderWidth: 1, borderColor: '#EEE', borderRadius: 10, paddingHorizontal: 12, height: 45 },
   formInput: { flex: 1, fontSize: 14, color: '#000', marginLeft: 8 },
   lockedText: { marginLeft: 10, color: '#777', fontSize: 14 },
   datePickerText: { marginLeft: 10, fontSize: 14, color: '#333' },
-  pickerWrapper: {
-    backgroundColor: '#F9F9F9',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#EEE',
-    height: 45,
-    justifyContent: 'center',
-  },
   modalSubmitBtn: { marginTop: 15, backgroundColor: 'green', borderRadius: 12, height: 50 },
-  textArea: { 
-    backgroundColor: '#F9F9F9', 
-    borderRadius: 12, 
-    borderWidth: 1, 
-    borderColor: '#EEE', 
-    padding: 10, 
-    height: 80, 
-    textAlignVertical: 'top', 
-    color: 'black' 
-  },
+  textArea: { backgroundColor: '#F9F9F9', borderRadius: 12, borderWidth: 1, borderColor: '#EEE', padding: 10, height: 80, textAlignVertical: 'top', color: 'black' },
 });
