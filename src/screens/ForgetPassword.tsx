@@ -5,10 +5,10 @@ import {
   Image,
   TouchableOpacity,
   Text,
-  ToastAndroid,
   Keyboard,
   Dimensions,
   ScrollView,
+  Alert
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Heading } from '../components/Heading';
@@ -60,12 +60,12 @@ export function ForgetPassword({ navigation }: any) {
     dispatch({ type: ACTIONS.LOADING, payload: false });
 
     if (res.errorMessage) {
-      ToastAndroid.show(res.errorMessage, ToastAndroid.LONG);
+      Alert.alert(res.errorMessage);
       return;
     }
     
     setIsSentOtp(true);
-    ToastAndroid.show(isBN ? 'ওটিপি পাঠানো হয়েছে' : 'OTP sent', ToastAndroid.LONG);
+    Alert.alert(isBN ? 'ওটিপি পাঠানো হয়েছে' : 'OTP sent', isBN ? 'আপনার ফোনে পাঠানো ওটিপি দিন' : 'Enter the OTP sent to your phone');
   };
 
   const handleVerify = async () => {
@@ -78,12 +78,12 @@ export function ForgetPassword({ navigation }: any) {
     dispatch({ type: ACTIONS.LOADING, payload: false });
 
     if (res.errorMessage) {
-      ToastAndroid.show(res.errorMessage, ToastAndroid.LONG);
+      Alert.alert(res.errorMessage);
       return;
     }
 
     setIsVerified(true);
-    ToastAndroid.show(isBN ? 'যাচাই করা হয়েছে' : 'Verified', ToastAndroid.LONG);
+    Alert.alert(isBN ? 'যাচাই করা হয়েছে' : 'Verified', isBN ? 'আপনি এখন নতুন পাসওয়ার্ড সেট করতে পারেন' : 'You can now set your new password');
   };
 
   const handleReset = async () => {
@@ -97,11 +97,11 @@ export function ForgetPassword({ navigation }: any) {
     dispatch({ type: ACTIONS.LOADING, payload: false });
 
     if (res.errorMessage) {
-      ToastAndroid.show(res.errorMessage, ToastAndroid.LONG);
+      Alert.alert(res.errorMessage);
       return;
     }
 
-    ToastAndroid.show(isBN ? 'পাসওয়ার্ড রিসেট সফল' : 'Password reset successful', ToastAndroid.LONG);
+    Alert.alert(isBN ? 'পাসওয়ার্ড রিসেট সফল' : 'Password reset successful', isBN ? 'আপনি এখন লগইন করতে পারেন' : 'You can now login');
     navigation.navigate('Login');
   };
 

@@ -5,10 +5,10 @@ import {
   Image,
   TouchableOpacity,
   Text,
-  ToastAndroid,
   Keyboard,
   Dimensions,
   ScrollView,
+  Alert
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Heading } from '../components/Heading';
@@ -61,7 +61,7 @@ export function LoginScreen({ navigation }: any) {
     dispatch({ type: ACTIONS.LOADING, payload: false });
 
     if (res.errorMessage) {
-      ToastAndroid.show(res.errorMessage, ToastAndroid.LONG);
+      Alert.alert(isBN ? 'লগইন ব্যর্থ' : 'Login Failed', isBN ? 'পুনরায় চেষ্টা করুন' : 'Please try again');
       return;
     }
     
@@ -79,7 +79,7 @@ export function LoginScreen({ navigation }: any) {
 
     await AsyncStorage.setItem('user', JSON.stringify(user));
     dispatch({ type: ACTIONS.AUTH, payload: user });
-    ToastAndroid.show(isBN ? 'স্বাগতম' : 'Welcome Back', ToastAndroid.SHORT);
+    Alert.alert(isBN ? 'স্বাগতম' : 'Welcome Back');
   };
 
   return (

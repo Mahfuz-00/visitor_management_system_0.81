@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons'; // or your icon lib --- IGNORE ---
+import Icon from 'react-native-vector-icons/Ionicons'; 
 
 export default function Notify() {
   const [modalVisible, setModalVisible] = useState(true);

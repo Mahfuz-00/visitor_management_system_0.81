@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Modal,
   Alert,
-  ToastAndroid,
 } from 'react-native';
 import { DataContext } from '../../store/GlobalState';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -66,8 +65,8 @@ export default function AppointmentDetails({ route, navigation }: any) {
     dispatch({ type: 'LOADING', payload: true });
     const res = await postData(`appointment/update/${appointmentDetails.id}`, formData, auth.token!);
     dispatch({ type: 'LOADING', payload: false });
-    if (res.errorMessage) { ToastAndroid.show(res.errorMessage, ToastAndroid.LONG); return; }
-    ToastAndroid.show(language === 'EN' ? 'Updated!' : 'আপডেট করা হয়েছে!', ToastAndroid.LONG);
+    if (res.errorMessage) { Alert.alert(res.errorMessage); return; }
+    Alert.alert(language === 'EN' ? 'Updated!' : 'আপডেট করা হয়েছে!');
     setShowUpdateModal(false);
     navigation.pop();
   };
@@ -76,8 +75,8 @@ export default function AppointmentDetails({ route, navigation }: any) {
     dispatch({ type: 'LOADING', payload: true });
     const res = await getData(`appointment/delete/${appointmentDetails.id}`, auth.token!);
     dispatch({ type: 'LOADING', payload: false });
-    if (res.errorMessage) { ToastAndroid.show(res.errorMessage, ToastAndroid.LONG); return; }
-    ToastAndroid.show(res.successMessage || (language === 'EN' ? 'Deleted!' : 'মুছে ফেলা হয়েছে!'), ToastAndroid.LONG);
+    if (res.errorMessage) { Alert.alert(res.errorMessage); return; }
+    Alert.alert(res.successMessage || (language === 'EN' ? 'Deleted!' : 'মুছে ফেলা হয়েছে!'));
     navigation.pop();
   };
 
@@ -85,8 +84,8 @@ export default function AppointmentDetails({ route, navigation }: any) {
     dispatch({ type: 'LOADING', payload: true });
     const res = await getData(`appointment/${appointmentDetails.id}/action/${action}`, auth.token!);
     dispatch({ type: 'LOADING', payload: false });
-    if (res.errorMessage) { ToastAndroid.show(res.errorMessage, ToastAndroid.LONG); return; }
-    ToastAndroid.show(res.successMessage || (language === 'EN' ? 'Success' : 'সফল হয়েছে'), ToastAndroid.LONG);
+    if (res.errorMessage) { Alert.alert(res.errorMessage); return; }
+    Alert.alert(res.successMessage || (language === 'EN' ? 'Success' : 'সফল হয়েছে'));
     setAppointmentDetails({ ...appointmentDetails, status: action === 'accept' ? 'Approved' : 'Rejected' });
   };
 

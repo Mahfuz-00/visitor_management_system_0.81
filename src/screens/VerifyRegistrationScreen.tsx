@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ToastAndroid,
   StyleSheet,
   Alert,
   Image,
@@ -79,7 +78,7 @@ export function VerifyRegistrationScreen({ route, navigation }: any) {
     dispatch({ type: 'LOADING', payload: false });
 
     if (res.errorMessage) {
-      ToastAndroid.show(isBN ? 'ব্যর্থ হয়েছে!' : 'Failed!', ToastAndroid.LONG);
+      Alert.alert(isBN ? 'ব্যর্থ হয়েছে!' : 'Failed!', isBN ? 'পুনরায় চেষ্টা করুন' : 'Please try again');
       return;
     }
     
@@ -89,7 +88,7 @@ export function VerifyRegistrationScreen({ route, navigation }: any) {
       return;
     }
 
-    ToastAndroid.show(isBN ? 'যাচাই সফল' : 'Verified Successfully', ToastAndroid.SHORT);
+    Alert.alert(isBN ? 'যাচাই সফল' : 'Verified Successfully', isBN ? 'আপনি এখন লগইন করতে পারেন' : 'You can now login');
 
     const user = {
       user: res.data.user,

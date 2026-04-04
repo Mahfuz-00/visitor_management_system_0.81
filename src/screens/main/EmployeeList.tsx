@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Modal,
   StyleSheet,
-  ToastAndroid,
   Alert,
   Platform,
   ActivityIndicator
@@ -123,9 +122,8 @@ const EmployeeList = ({ navigation }: any) => {
 
   const addMeeting = () => {
     if (!meetingDuration) {
-      return ToastAndroid.show(
-        language === 'BN' ? "সময়সীমা নির্বাচন করুন" : "Select Duration",
-        ToastAndroid.SHORT
+      return Alert.alert(
+        language === 'BN' ? "সময়সীমা নির্বাচন করুন" : "Select Duration"
       );
     }
     setMeetings([{ meetingDate, meetingTime, meetingDuration }]);
@@ -153,7 +151,7 @@ const EmployeeList = ({ navigation }: any) => {
 
     if (res.errorMessage) return setError(res.errorMessage);
 
-    ToastAndroid.show(language === 'BN' ? "সফল হয়েছে" : "Success", ToastAndroid.LONG);
+    Alert.alert(language === 'BN' ? "সফল হয়েছে" : "Success");
     setShowModal(false);
     resetForm();
   };

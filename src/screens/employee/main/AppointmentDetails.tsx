@@ -7,8 +7,8 @@ import {
   Image,
   StyleSheet,
   Modal,
-  ToastAndroid,
   TouchableWithoutFeedback,
+  Alert
 } from 'react-native';
 import { DataContext } from '../../../store/GlobalState';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -80,7 +80,7 @@ export default function AppointmentDetails({ route, navigation }: any) {
     const res = await postData(`employee/appointment/${appointmentDetails.id}/accept`, formData, auth.token!);
     dispatch({ type: ACTIONS.LOADING, payload: false });
 
-    if (res.errorMessage) return ToastAndroid.show(res.errorMessage, ToastAndroid.LONG);
+    if (res.errorMessage) return Alert.alert(res.errorMessage);
     setShowAcceptModal(false);
     navigation.goBack();
   };
@@ -89,7 +89,7 @@ export default function AppointmentDetails({ route, navigation }: any) {
     dispatch({ type: ACTIONS.LOADING, payload: true });
     const res = await getData(`employee/appointment/${appointmentDetails.id}/accept`, auth.token!);
     dispatch({ type: ACTIONS.LOADING, payload: false });
-    if (res.errorMessage) return ToastAndroid.show(res.errorMessage, ToastAndroid.LONG);
+    if (res.errorMessage) return Alert.alert(res.errorMessage);
     navigation.goBack();
   };
 
@@ -98,7 +98,7 @@ export default function AppointmentDetails({ route, navigation }: any) {
     dispatch({ type: ACTIONS.LOADING, payload: true });
     const res = await postData(`employee/appointment/${appointmentDetails.id}/reject`, { note: rejectNote }, auth.token!);
     dispatch({ type: ACTIONS.LOADING, payload: false });
-    if (res.errorMessage) return ToastAndroid.show(res.errorMessage, ToastAndroid.LONG);
+    if (res.errorMessage) return Alert.alert(res.errorMessage);
     setShowRejectModal(false);
     navigation.goBack();
   };

@@ -5,10 +5,10 @@ import {
   Image,
   TouchableOpacity,
   Text,
-  ToastAndroid,
   ScrollView,
   Dimensions,
   Keyboard,
+  Alert
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Heading } from '../components/Heading';
@@ -74,7 +74,7 @@ export function RegistrationScreen({ navigation }: any) {
     dispatch({ type: 'LOADING', payload: false });
 
     if (res.errorMessage) {
-      ToastAndroid.show(isBN ? 'ব্যর্থ হয়েছে!' : 'Failed!', ToastAndroid.LONG);
+      Alert.alert(isBN ? 'ব্যর্থ হয়েছে!' : 'Failed!', isBN ? 'পুনরায় চেষ্টা করুন' : 'Please try again');
       return;
     }
 
@@ -84,7 +84,7 @@ export function RegistrationScreen({ navigation }: any) {
       return;
     }
 
-    ToastAndroid.show(isBN ? 'নিবন্ধন সফল' : 'Registered successfully', ToastAndroid.LONG);
+    Alert.alert(isBN ? 'নিবন্ধন সফল' : 'Registered successfully', isBN ? 'আপনি এখন লগইন করতে পারেন' : 'You can now login');
     navigation.navigate('VerifyRegistration', { phone });
   };
 

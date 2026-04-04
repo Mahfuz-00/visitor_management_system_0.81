@@ -6,13 +6,13 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
-  ToastAndroid,
+  Alert
 } from 'react-native';
 import { DataContext } from '../../store/GlobalState';
 import { postData, postImage, getData } from '../../utils/fetchData';
 import { Error } from '../../components/Error';
 import { Input } from '../../components/Input';
-import { CustomPicker } from '../../components/Picker'; // ✅ Integrated Custom Picker
+import { CustomPicker } from '../../components/Picker'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchImageLibrary } from 'react-native-image-picker';
 import sample_profile_avatar from '../../assets/sample_profile_avatar.png';
@@ -107,7 +107,7 @@ export default function EditProfile({ navigation }: any) {
       await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
       dispatch({ type: 'AUTH', payload: updatedUser });
 
-      ToastAndroid.show(res.message || (language === 'BN' ? 'প্রোফাইল আপডেট হয়েছে' : 'Profile updated'), ToastAndroid.LONG);
+      Alert.alert(res.message || (language === 'BN' ? 'প্রোফাইল আপডেট হয়েছে' : 'Profile updated'));
       navigation.pop();
     } catch (err) {
       setError(language === 'BN' ? 'একটি অপ্রত্যাশিত ত্রুটি ঘটেছে' : 'An unexpected error occurred');

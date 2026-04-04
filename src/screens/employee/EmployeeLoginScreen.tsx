@@ -4,11 +4,11 @@ import {
   View,
   Image,
   Keyboard,
-  ToastAndroid,
   TouchableOpacity,
   Text,
   Dimensions,
   ScrollView,
+  Alert
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Heading } from '../../components/Heading';
@@ -62,7 +62,7 @@ export function EmployeeLoginScreen({ navigation }: any) {
     dispatch({ type: 'LOADING', payload: false });
 
     if (res.errorMessage) {
-      ToastAndroid.show(res.errorMessage, ToastAndroid.LONG);
+      Alert.alert(res.errorMessage);
       return;
     }
 

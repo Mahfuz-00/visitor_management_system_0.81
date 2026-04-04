@@ -38,7 +38,7 @@ export default function OnboardingScreen({ navigation }: any) {
     {
       id: '1',
       image: require('../assets/logo.png'),
-      title: isBN ? 'বিটিআরসি ই-পাস' : 'BTRC e-Pass',
+      title: isBN ? 'টিএনএস ই-পাস' : 'TNS E-Pass',
       subtitle: isBN 
         ? 'অফিসিয়াল ডিজিটাল অ্যাপয়েন্টমেন্ট এবং ভিজিটর ম্যানেজমেন্ট সিস্টেম।' 
         : 'Official digital appointment and visitor management system.',
