@@ -12,7 +12,7 @@ import { DataContext } from '../../store/GlobalState';
 import { postData, postImage, getData } from '../../utils/fetchData';
 import { Error } from '../../components/Error';
 import { Input } from '../../components/Input';
-import { CustomPicker } from '../../components/Picker'; 
+import CustomPicker from '../../components/CustomPicker.tsx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchImageLibrary } from 'react-native-image-picker';
 import sample_profile_avatar from '../../assets/sample_profile_avatar.png';
@@ -88,7 +88,7 @@ export default function EditProfile({ navigation }: any) {
       };
 
       const res = await postData('update/profile', formData, auth.token!);
-      
+
       if (res.errors) {
         setError(language === 'BN' ? 'প্রোফাইল আপডেট করতে ব্যর্থ হয়েছে' : 'Failed to update profile');
         setIsSubmitting(false);
@@ -146,8 +146,8 @@ export default function EditProfile({ navigation }: any) {
                 formImage?.assets?.[0]?.uri
                   ? { uri: formImage.assets[0].uri }
                   : user.image
-                  ? { uri: user.image }
-                  : sample_profile_avatar
+                    ? { uri: user.image }
+                    : sample_profile_avatar
               }
             />
             <TouchableOpacity style={styles.cameraOverlay} onPress={openGallery} disabled={isSubmitting}>
@@ -176,12 +176,14 @@ export default function EditProfile({ navigation }: any) {
               <Input value={phone} onChangeText={setPhone} editable={!isSubmitting} keyboardType="phone-pad" />
             </View>
             <View style={[styles.inputGroup, { flex: 1 }]}>
-               <CustomPicker
+              <CustomPicker
                 label={language === 'BN' ? 'রক্তের গ্রুপ' : 'Blood Group'}
                 placeholder="Select"
                 selectedValue={bloodGroup}
                 onValueChange={setBloodGroup}
                 items={bloodGroupItems}
+                icon="water-outline"
+                showChevron={true}
               />
             </View>
           </View>
@@ -194,15 +196,15 @@ export default function EditProfile({ navigation }: any) {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{language === 'BN' ? 'লিঙ্গ' : 'Gender'}</Text>
             <View style={styles.genderToggle}>
-              <TouchableOpacity 
-                style={[styles.genderBtn, gender === 'male' && styles.genderBtnActive]} 
+              <TouchableOpacity
+                style={[styles.genderBtn, gender === 'male' && styles.genderBtnActive]}
                 onPress={() => !isSubmitting && setGender('male')}
               >
                 <Icon name="male" size={18} color={gender === 'male' ? '#FFF' : '#666'} />
                 <Text style={[styles.genderBtnText, gender === 'male' && { color: '#FFF' }]}>Male</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.genderBtn, gender === 'female' && styles.genderBtnActive]} 
+              <TouchableOpacity
+                style={[styles.genderBtn, gender === 'female' && styles.genderBtnActive]}
                 onPress={() => !isSubmitting && setGender('female')}
               >
                 <Icon name="female" size={18} color={gender === 'female' ? '#FFF' : '#666'} />
@@ -213,17 +215,17 @@ export default function EditProfile({ navigation }: any) {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{language === 'BN' ? 'বর্তমান ঠিকানা' : 'Present Address'}</Text>
-            <Input 
-                value={presentAddress} 
-                onChangeText={setPresentAddress} 
-                multiline 
-                editable={!isSubmitting}
-                style={styles.textArea}
+            <Input
+              value={presentAddress}
+              onChangeText={setPresentAddress}
+              multiline
+              editable={!isSubmitting}
+              style={styles.textArea}
             />
           </View>
 
-          <TouchableOpacity 
-            style={[styles.submitBtn, isSubmitting && styles.disabledBtn]} 
+          <TouchableOpacity
+            style={[styles.submitBtn, isSubmitting && styles.disabledBtn]}
             onPress={handleSubmit}
             disabled={isSubmitting}
           >

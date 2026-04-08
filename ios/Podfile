@@ -14,13 +14,25 @@ if linkage != nil
   use_frameworks! :linkage => linkage.to_sym
 end
 
+# Pre-install: Force React pods to static if use_frameworks!
+pre_install do |installer|
+  installer.pod_targets.each do |pod|
+    if pod.name.start_with?('ReactCommon', 'YogaKit') || pod.name.eql?('React-Codegen')
+      def pod.build_type;
+        Pod::BuildType.static_library
+      end
+    end
+  end
+end
+
 target 'VMSNew' do
   config = use_native_modules!
 
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.
-    :app_path => "#{Pod::Config.instance.installation_root}/.."
+    :app_path => "#{Pod::Config.instance.installation_root}/..",
+    :hermes_enabled => true
   )
 
   post_install do |installer|
@@ -31,5 +43,15 @@ target 'VMSNew' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        # Ensure dSYM generation for Release builds
+        if config.name == 'Release'
+          config.build_settings['DEBUG_INFORMATION_FORMAT'] = 'dwarf-with-dsym'
+          config.build_settings['STRIP_INSTALLED_PRODUCT'] = 'YES'
+        end
+      end
+    end
   end
 end

@@ -8,7 +8,8 @@ import {
   StyleSheet,
   Modal,
   TouchableWithoutFeedback,
-  Alert
+  Alert,
+  Platform
 } from 'react-native';
 import { DataContext } from '../../../store/GlobalState';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -18,10 +19,10 @@ import { Heading } from '../../../components/Heading';
 import { Error } from '../../../components/Error';
 import { Input } from '../../../components/Input';
 import { FilledButton } from '../../../components/FilledButton';
-import { CustomPicker } from '../../../components/Picker'; 
-import DatePicker from 'react-native-date-picker';
+import CustomPicker from '../../../components/CustomPicker.tsx';
 import sample_profile_avatar from '../../../assets/sample_profile_avatar.png';
 import { ACTIONS } from '../../../store/Actions';
+import DateTimePickerField from '../../../components/DateTimePickerField';
 
 export default function AppointmentDetails({ route, navigation }: any) {
   const [appointmentDetails, setAppointmentDetails] = useState(route.params?.appointmentDetails || {});
@@ -31,6 +32,7 @@ export default function AppointmentDetails({ route, navigation }: any) {
   const [error, setError] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
+  
   const [openDatePicker, setOpenDatePicker] = useState(false);
   const [openTimePicker, setOpenTimePicker] = useState(false);
 
@@ -38,7 +40,7 @@ export default function AppointmentDetails({ route, navigation }: any) {
   const [meetingDate, setMeetingDate] = useState(new Date());
   const [meetingTime, setMeetingTime] = useState(new Date());
   const [meetingDuration, setMeetingDuration] = useState('');
-  
+
   const [reviewNote, setReviewNote] = useState('');
   const [rejectNote, setRejectNote] = useState('');
 
@@ -107,7 +109,6 @@ export default function AppointmentDetails({ route, navigation }: any) {
     const getDurations = async () => {
       const res = await getData('appointment/durations', auth.token!);
       if (res.data) {
-        // Convert object { "30": "30 Min" } to array [{ id: "30", name: "30 Min" }]
         const formattedDurations = Object.entries(res.data).map(([id, name]) => ({
           id,
           name: name as string
@@ -152,7 +153,6 @@ export default function AppointmentDetails({ route, navigation }: any) {
         </View>
       </ScrollView>
 
-      {/* FOOTER ACTIONS */}
       <View style={styles.stickyFooter}>
         {appointmentDetails.status === 'Pending' && (
           <>
@@ -186,21 +186,23 @@ export default function AppointmentDetails({ route, navigation }: any) {
               <Text style={styles.formLabel}>{language === 'EN' ? 'Date & Time' : 'তারিখ ও সময়'}</Text>
               <View style={styles.formRow}>
                 <TouchableOpacity style={[styles.inputContainer, { flex: 1, marginRight: 5 }]} onPress={() => setOpenDatePicker(true)}>
-                  <Text style={{color: 'black'}}>{moment(meetingDate).format('YYYY-MM-DD')}</Text>
+                  <Text style={{ color: 'black' }}>{moment(meetingDate).format('YYYY-MM-DD')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.inputContainer, { flex: 1 }]} onPress={() => setOpenTimePicker(true)}>
-                  <Text style={{color: 'black'}}>{moment(meetingTime).format('hh:mm A')}</Text>
+                  <Text style={{ color: 'black' }}>{moment(meetingTime).format('hh:mm A')}</Text>
                 </TouchableOpacity>
               </View>
 
-              <View style={{marginTop: 10}}>
-                 <CustomPicker
-                    label={language === 'EN' ? 'Duration' : 'সময়সীমা'}
-                    placeholder={language === 'EN' ? "Select Duration" : "সময়সীমা নির্বাচন করুন"}
-                    selectedValue={meetingDuration}
-                    onValueChange={(v) => setMeetingDuration(v)}
-                    items={durations}
-                 />
+              <View style={{ marginTop: 10 }}>
+                <CustomPicker
+                  label={language === 'EN' ? 'Duration' : 'সময়সীমা'}
+                  placeholder={language === 'EN' ? "Select Duration" : "সময়সীমা নির্বাচন করুন"}
+                  selectedValue={meetingDuration}
+                  onValueChange={(v) => setMeetingDuration(v)}
+                  items={durations}
+                  icon="time-outline"
+                  showChevron={true}
+                />
               </View>
 
               <Text style={styles.formLabel}>{language === 'EN' ? 'Note (Optional)' : 'নোট (ঐচ্ছিক)'}</Text>
@@ -233,14 +235,14 @@ export default function AppointmentDetails({ route, navigation }: any) {
               </View>
               <Error error={error} />
               <Text style={styles.formLabel}>{language === 'EN' ? 'Reason' : 'কারণ'}</Text>
-              <Input 
-                style={styles.reviewNoteInput} 
-                placeholder={language === 'EN' ? "Why are you rejecting?" : "কেন বাতিল করছেন?"} 
-                value={rejectNote} 
-                onChangeText={setRejectNote} 
-                multiline 
-                numberOfLines={2} 
-                maxLength={60} 
+              <Input
+                style={styles.reviewNoteInput}
+                placeholder={language === 'EN' ? "Why are you rejecting?" : "কেন বাতিল করছেন?"}
+                value={rejectNote}
+                onChangeText={setRejectNote}
+                multiline
+                numberOfLines={2}
+                maxLength={60}
               />
               <FilledButton title={language === 'EN' ? "Confirm Rejection" : "বাতিল নিশ্চিত করুন"} style={{ backgroundColor: 'red', marginTop: 20 }} onPress={handleRejectSubmit} />
             </View>
@@ -248,8 +250,49 @@ export default function AppointmentDetails({ route, navigation }: any) {
         </TouchableOpacity>
       </Modal>
 
-      <DatePicker modal mode="date" open={openDatePicker} date={meetingDate} onConfirm={d => { setOpenDatePicker(false); setMeetingDate(d); }} onCancel={() => setOpenDatePicker(false)} />
-      <DatePicker modal mode="time" open={openTimePicker} date={meetingTime} onConfirm={t => { setOpenTimePicker(false); setMeetingTime(t); }} onCancel={() => setOpenTimePicker(false)} />
+      {/* FIXED PICKER MODAL (Now Vertically Centered) */}
+      <Modal
+        transparent
+        visible={openDatePicker || openTimePicker}
+        animationType="fade"
+        onRequestClose={() => {
+          setOpenDatePicker(false);
+          setOpenTimePicker(false);
+        }}
+      >
+        <TouchableOpacity 
+          style={styles.pickerModalOverlay} 
+          activeOpacity={1} 
+          onPress={() => { setOpenDatePicker(false); setOpenTimePicker(false); }}
+        >
+          <View style={{ width: '90%' }}>
+            {openDatePicker && (
+              <DateTimePickerField
+                label={language === 'EN' ? 'Date' : 'তারিখ'}
+                value={meetingDate}
+                mode="date"
+                onChange={(date: any) => {
+                  setMeetingDate(date);
+                  if (Platform.OS === 'android') setOpenDatePicker(false);
+                }}
+                onClose={() => setOpenDatePicker(false)}
+              />
+            )}
+            {openTimePicker && (
+              <DateTimePickerField
+                label={language === 'EN' ? 'Time' : 'সময়'}
+                value={meetingTime}
+                mode="time"
+                onChange={(time: any) => {
+                  setMeetingTime(time);
+                  if (Platform.OS === 'android') setOpenTimePicker(false);
+                }}
+                onClose={() => setOpenTimePicker(false)}
+              />
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -270,6 +313,24 @@ const styles = StyleSheet.create({
   btn: { height: 45, borderRadius: 10, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' },
   btnLabel: { color: '#FFF', fontWeight: 'bold', fontSize: 12, marginLeft: 5 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  // Centered overlay for picker
+  pickerModalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    justifyContent: 'center',
+    alignItems: 'center' 
+  },
+  pickerContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 15,
+    padding: 20,
+    width: '90%',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
   modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 30 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   formLabel: { fontSize: 12, color: '#666', marginBottom: 5, marginTop: 10 },
@@ -278,7 +339,8 @@ const styles = StyleSheet.create({
   reviewNoteInput: {
     height: 65,
     textAlignVertical: 'top',
-    padding: 10,
+    padding: 12, 
+    paddingTop: 14,
     backgroundColor: '#F9F9F9',
     borderRadius: 8,
     borderWidth: 1,

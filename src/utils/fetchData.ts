@@ -1,6 +1,7 @@
 // export const baseUrl = "https://epass.touchandsolve.com";
 // export const baseUrl = "http://103.98.64.8";
-export const baseUrl = "http://160.191.150.185:9043";
+// export const baseUrl = "http://160.191.150.185:9043";
+export const baseUrl = "http://160.191.150.185:8088";
 
 export const postImage = async (url: string, post: any, token: string) => {
     const res = await fetch(`${baseUrl}/api/${url}`, {

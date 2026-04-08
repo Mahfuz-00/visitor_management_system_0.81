@@ -9,9 +9,9 @@ import {
   StyleSheet,
   Alert,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  SafeAreaView
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import { DataContext } from './../../store/GlobalState';
 import { postData, getData } from '../../utils/fetchData';
 import sample_profile_avatar from '../../assets/sample_profile_avatar.png';
@@ -20,9 +20,10 @@ import { useIsFocused } from "@react-navigation/native";
 import { Error } from '../../components/Error';
 import { Input } from './../../components/Input';
 import { FilledButton } from './../../components/FilledButton';
-import DatePicker from 'react-native-date-picker';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { ACTIONS } from '../../store/Actions';
+import DateTimePickerField from '../../components/DateTimePickerField';
+import CustomPicker from '../../components/CustomPicker';
 
 const EmployeeList = ({ navigation }: any) => {
   const { state, dispatch } = useContext(DataContext)!;
@@ -167,7 +168,6 @@ const EmployeeList = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      {/* SEARCH SECTION */}
       <View style={styles.searchSection}>
         <View style={styles.searchInputContainer}>
           <Icon name="search" size={18} color="#999" style={{ marginLeft: 12 }} />
@@ -182,39 +182,41 @@ const EmployeeList = ({ navigation }: any) => {
 
         <View style={styles.filterRow}>
           <View style={styles.filterBox}>
-            <Text style={styles.filterLabel}>{language === 'BN' ? 'বিভাগ' : 'Department'}</Text>
-            <View style={styles.pickerBorder}>
-              <Picker
-                selectedValue={searchDepartment}
-                onValueChange={setSearchDepartment}
-                dropdownIconColor="green"
-                mode="dialog"
-                style={styles.nativePicker}
-              >
-                <Picker.Item label={language === 'BN' ? 'সব' : 'All'} value="" />
-                {departments.map((item, i) => (
-                  <Picker.Item key={i} label={item.name || item} value={item.name || item} />
-                ))}
-              </Picker>
-            </View>
+            <CustomPicker
+              label={language === 'BN' ? 'বিভাগ' : 'Department'}
+              placeholder={language === 'BN' ? 'সব' : 'All'}
+              selectedValue={searchDepartment}
+              onValueChange={setSearchDepartment}
+              items={[
+                // Prepends "All" only for Android users so they can reset the filter
+                ...(Platform.OS === 'android' ? [{ id: '', name: language === 'BN' ? 'সব' : 'All' }] : []),
+                ...departments.map(item => ({
+                  id: item.name || item,
+                  name: item.name || item
+                }))
+              ]}
+              icon=""
+              showChevron={true}
+            />
           </View>
 
           <View style={styles.filterBox}>
-            <Text style={styles.filterLabel}>{language === 'BN' ? 'পদবী' : 'Designation'}</Text>
-            <View style={styles.pickerBorder}>
-              <Picker
-                selectedValue={searchDesignation}
-                onValueChange={setSearchDesignation}
-                dropdownIconColor="green"
-                mode="dialog"
-                style={styles.nativePicker}
-              >
-                <Picker.Item label={language === 'BN' ? 'সব' : 'All'} value="" />
-                {designations.map((item, i) => (
-                  <Picker.Item key={i} label={item.name || item} value={item.name || item} />
-                ))}
-              </Picker>
-            </View>
+            <CustomPicker
+              label={language === 'BN' ? 'পদবী' : 'Designation'}
+              placeholder={language === 'BN' ? 'সব' : 'All'}
+              selectedValue={searchDesignation}
+              onValueChange={setSearchDesignation}
+              items={[
+                // Prepends "All" only for Android users so they can reset the filter
+                ...(Platform.OS === 'android' ? [{ id: '', name: language === 'BN' ? 'সব' : 'All' }] : []),
+                ...departments.map(item => ({
+                  id: item.name || item,
+                  name: item.name || item
+                }))
+              ]}
+              icon=""
+              showChevron={true}
+            />
           </View>
         </View>
       </View>
@@ -257,154 +259,174 @@ const EmployeeList = ({ navigation }: any) => {
         )}
       </ScrollView>
 
+      {/* CREATE APPOINTMENT MODAL */}
       <Modal visible={showModal} animationType="slide" presentationStyle="fullScreen">
-        <View style={styles.modalBg}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => { setShowModal(false); resetForm(); }}>
-              <Icon name="close" size={28} color="#333" />
-            </TouchableOpacity>
-            <Text style={styles.modalHeaderTitle}>
-              {language === 'BN' ? 'নতুন অ্যাপয়েন্টমেন্ট তৈরি করুন' : 'Create Appointment'}
-            </Text>
-            <View style={{ width: 28 }} />
-          </View>
-
-          <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-            {error ? <View style={{ marginBottom: 10 }}><Error error={error} /></View> : null}
-
-            <View style={styles.employeeHighlight}>
-              <Icon name="people-sharp" size={36} color="green" />
-              <View style={{ marginLeft: 12 }}>
-                <Text style={styles.highlightLabel}>{language === 'BN' ? 'মিটিং যার সাথে' : 'Meeting With'}</Text>
-                <Text style={styles.highlightValue}>{personName}</Text>
-              </View>
+        <SafeAreaView style={styles.modalSafeArea}>
+          <View style={styles.modalBg}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => { setShowModal(false); resetForm(); }}>
+                <Icon name="close" size={28} color="#333" />
+              </TouchableOpacity>
+              <Text style={styles.modalHeaderTitle}>
+                {language === 'BN' ? 'নতুন অ্যাপয়েন্টমেন্ট তৈরি করুন' : 'Create Appointment'}
+              </Text>
+              <View style={{ width: 28 }} />
             </View>
 
-            <View style={styles.formCard}>
-              <Text style={styles.sectionHeading}>{language === 'BN' ? 'সাধারণ তথ্য' : 'Basic Information'}</Text>
-              <Text style={styles.inputLabel}>{language === 'BN' ? 'দর্শনার্থীর সংখ্যা' : 'Number of Visitors'}</Text>
-              <View style={styles.iconInput}>
-                <Icon name="people-outline" size={20} color="green" />
-                <Input
-                  style={styles.cleanInput}
-                  value={noOfPerson}
-                  onChangeText={setNoOfPerson}
-                  keyboardType="numeric"
-                  placeholder="e.g. 2"
-                  multiline={false}
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              {error ? <View style={{ marginBottom: 10 }}><Error error={error} /></View> : null}
+
+              <View style={styles.employeeHighlight}>
+                <Icon name="people-sharp" size={36} color="green" />
+                <View style={{ marginLeft: 12 }}>
+                  <Text style={styles.highlightLabel}>{language === 'BN' ? 'মিটিং যার সাথে' : 'Meeting With'}</Text>
+                  <Text style={styles.highlightValue}>{personName}</Text>
+                </View>
+              </View>
+
+              <View style={styles.formCard}>
+                <Text style={styles.sectionHeading}>{language === 'BN' ? 'সাধারণ তথ্য' : 'Basic Information'}</Text>
+                <Text style={styles.inputLabel}>{language === 'BN' ? 'দর্শনার্থীর সংখ্যা' : 'Number of Visitors'}</Text>
+                <View style={styles.iconInput}>
+                  <Icon name="people-outline" size={20} color="green" />
+                  <Input
+                    style={styles.cleanInput}
+                    value={noOfPerson}
+                    onChangeText={setNoOfPerson}
+                    keyboardType="numeric"
+                    placeholder="e.g. 2"
+                    multiline={false}
+                  />
+                </View>
+
+                <View style={{ marginTop: 16 }} />
+
+                <CustomPicker
+                  label={language === 'BN' ? 'মিটিংয়ের উদ্দেশ্য' : 'Meeting Purpose'}
+                  placeholder={language === 'BN' ? "উদ্দেশ্য নির্বাচন করুন" : "Select Purpose"}
+                  selectedValue={purpose}
+                  onValueChange={setPurpose}
+                  items={purposes.map(p => ({ id: p, name: p }))}
+                  icon="bookmark-outline"
+                  showChevron={true}
                 />
               </View>
 
-              <Text style={[styles.inputLabel, { marginTop: 12 }]}>{language === 'BN' ? 'মিটিংয়ের উদ্দেশ্য' : 'Meeting Purpose'}</Text>
-              <View style={styles.iconInput}>
-                <Icon name="bookmark-outline" size={20} color="green" />
-                <Picker
-                  selectedValue={purpose}
-                  onValueChange={setPurpose}
-                  style={{ flex: 1, color: 'black' }}
-                  dropdownIconColor="green"
-                  mode="dialog"
-                >
-                  <Picker.Item label="Select Purpose" value="" />
-                  {purposes.map((p, i) => (
-                    <Picker.Item key={i} label={p} value={p} />
-                  ))}
-                </Picker>
-              </View>
-            </View>
+              <View style={styles.formCard}>
+                <Text style={styles.sectionHeading}>{language === 'BN' ? 'শিডিউল স্লট' : 'Schedule Slot'}</Text>
+                {meetings.length === 0 ? (
+                  <>
+                    <View style={styles.slotPickerRow}>
+                      <TouchableOpacity style={styles.dateTimeBtn} onPress={() => setOpenDatePicker(true)}>
+                        <Icon name="calendar-outline" size={18} color="green" />
+                        <Text style={styles.dateTimeText}>{moment(meetingDate).format('DD MMM')}</Text>
+                      </TouchableOpacity>
 
-            <View style={styles.formCard}>
-              <Text style={styles.sectionHeading}>{language === 'BN' ? 'শিডিউল স্লট' : 'Schedule Slot'}</Text>
-              {meetings.length === 0 ? (
-                <>
-                  <View style={styles.slotPickerRow}>
-                    <TouchableOpacity style={styles.dateTimeBtn} onPress={() => setOpenDatePicker(true)}>
-                      <Icon name="calendar-outline" size={18} color="green" />
-                      <Text style={styles.dateTimeText}>{moment(meetingDate).format('DD MMM')}</Text>
-                    </TouchableOpacity>
+                      <TouchableOpacity style={styles.dateTimeBtn} onPress={() => setOpenTimePicker(true)}>
+                        <Icon name="time-outline" size={18} color="green" />
+                        <Text style={styles.dateTimeText}>{moment(meetingTime).format('hh:mm A')}</Text>
+                      </TouchableOpacity>
+                    </View>
 
-                    <TouchableOpacity style={styles.dateTimeBtn} onPress={() => setOpenTimePicker(true)}>
-                      <Icon name="time-outline" size={18} color="green" />
-                      <Text style={styles.dateTimeText}>{moment(meetingTime).format('hh:mm A')}</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={{ marginTop: 12 }}>
-                    <View style={styles.durationPickerBorder}>
-                      <Picker
+                    <View style={{ marginTop: 12 }}>
+                      <CustomPicker
+                        label={language === 'EN' ? 'Duration' : 'সময়সীমা'}
+                        placeholder={language === 'BN' ? "সময়সীমা নির্বাচন করুন" : "Select Duration"}
                         selectedValue={meetingDuration}
                         onValueChange={setMeetingDuration}
-                        style={styles.nativePicker}
-                        mode="dialog"
-                        dropdownIconColor="green"
-                      >
-                        <Picker.Item label="Duration" value="" />
-                        {Object.keys(durations).map((k) => (
-                          <Picker.Item key={k} label={durations[k]} value={k} />
-                        ))}
-                      </Picker>
+                        items={Object.keys(durations).map(k => ({ id: k, name: durations[k] }))}
+                        icon="time-outline"
+                        showChevron={true}
+                      />
                     </View>
-                  </View>
 
-                  <TouchableOpacity style={[styles.addSlotButton, { marginTop: 16 }]} onPress={addMeeting}>
-                    <Icon name="add" size={20} color="#FFF" />
-                    <Text style={styles.addSlotText}>Add Slot</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                meetings.map((m, i) => (
-                  <View key={i} style={styles.addedSlotCard}>
-                    <View>
-                      <Text style={styles.slotMain}>
-                        {moment(m.meetingDate).format('DD MMM')} • {moment(m.meetingTime).format('hh:mm A')}
-                      </Text>
-                      <Text style={styles.slotSub}>{durations[m.meetingDuration]}</Text>
-                    </View>
-                    <TouchableOpacity onPress={removeMeeting}>
-                      <Icon name="trash-outline" size={22} color="#D32F2F" />
+                    <TouchableOpacity style={[styles.addSlotButton, { marginTop: 16 }]} onPress={addMeeting}>
+                      <Icon name="add" size={20} color="#FFF" />
+                      <Text style={styles.addSlotText}>Add Slot</Text>
                     </TouchableOpacity>
-                  </View>
-                ))
+                  </>
+                ) : (
+                  meetings.map((m, i) => (
+                    <View key={i} style={styles.addedSlotCard}>
+                      <View>
+                        <Text style={styles.slotMain}>
+                          {moment(m.meetingDate).format('DD MMM')} • {moment(m.meetingTime).format('hh:mm A')}
+                        </Text>
+                        <Text style={styles.slotSub}>{durations[m.meetingDuration]}</Text>
+                      </View>
+                      <TouchableOpacity onPress={removeMeeting}>
+                        <Icon name="trash-outline" size={22} color="#D32F2F" />
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
+              </View>
+
+              <View style={styles.formCard}>
+                <Text style={styles.inputLabel}>{language === 'BN' ? 'অতিরিক্ত নোট (ঐচ্ছিক)' : 'Additional Note (Optional)'}</Text>
+                <Input
+                  style={styles.textArea}
+                  value={note}
+                  onChangeText={setNote}
+                  multiline={true}
+                  maxLength={70}
+                  placeholder="Anything else?"
+                />
+              </View>
+
+              <FilledButton
+                title={loading ? "Sending..." : "SUBMIT APPOINTMENT"}
+                onPress={handleSubmit}
+                style={styles.finalSubmitBtn}
+              />
+              <View style={{ height: 30 }} />
+            </ScrollView>
+          </View>
+        </SafeAreaView>
+
+        {/* UPDATED PICKER MODAL (Vertically Centered) */}
+        <Modal
+          transparent
+          visible={openDatePicker || openTimePicker}
+          animationType="fade"
+          onRequestClose={() => {
+            setOpenDatePicker(false);
+            setOpenTimePicker(false);
+          }}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => { setOpenDatePicker(false); setOpenTimePicker(false); }}
+          >
+            <View style={{ width: '90%' }}>
+              {openDatePicker && (
+                <DateTimePickerField
+                  label={language === 'EN' ? 'Date' : 'তারিখ'}
+                  value={meetingDate}
+                  mode="date"
+                  onChange={(date: any) => {
+                    setMeetingDate(date);
+                    if (Platform.OS === 'android') setOpenDatePicker(false);
+                  }}
+                  onClose={() => setOpenDatePicker(false)}
+                />
+              )}
+              {openTimePicker && (
+                <DateTimePickerField
+                  label={language === 'EN' ? 'Time' : 'সময়'}
+                  value={meetingTime}
+                  mode="time"
+                  onChange={(time: any) => {
+                    setMeetingTime(time);
+                    if (Platform.OS === 'android') setOpenTimePicker(false);
+                  }}
+                  onClose={() => setOpenTimePicker(false)}
+                />
               )}
             </View>
-
-            <View style={styles.formCard}>
-              <Text style={styles.inputLabel}>{language === 'BN' ? 'অতিরিক্ত নোট (ঐচ্ছিক)' : 'Additional Note (Optional)'}</Text>
-              <Input
-                style={styles.textArea}
-                value={note}
-                onChangeText={setNote}
-                multiline={true}
-                maxLength={70}
-                placeholder="Anything else?"
-              />
-            </View>
-
-            <FilledButton
-              title={loading ? "Sending..." : "SUBMIT APPOINTMENT"}
-              onPress={handleSubmit}
-              style={styles.finalSubmitBtn}
-            />
-            <View style={{ height: 30 }} />
-          </ScrollView>
-        </View>
-
-        <DatePicker
-          modal
-          mode="date"
-          open={openDatePicker}
-          date={meetingDate}
-          onConfirm={d => { setOpenDatePicker(false); setMeetingDate(d) }}
-          onCancel={() => setOpenDatePicker(false)}
-        />
-        <DatePicker
-          modal
-          mode="time"
-          open={openTimePicker}
-          date={meetingTime}
-          onConfirm={t => { setOpenTimePicker(false); setMeetingTime(t) }}
-          onCancel={() => setOpenTimePicker(false)}
-        />
+          </TouchableOpacity>
+        </Modal>
       </Modal>
     </View>
   );
@@ -417,17 +439,6 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, height: 48, marginLeft: 8, fontSize: 15, textAlignVertical: 'center' },
   filterRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 15 },
   filterBox: { width: '48%' },
-  filterLabel: { fontSize: 11, fontWeight: 'bold', color: '#888', marginBottom: 4, marginLeft: 2 },
-  pickerBorder: { backgroundColor: '#F3F4F6', borderRadius: 10, height: 42, justifyContent: 'center', overflow: 'hidden' },
-  durationPickerBorder: { backgroundColor: '#F9F9F9', borderRadius: 12, borderWidth: 1, borderColor: '#EEE', height: 48, justifyContent: 'center', overflow: 'hidden' },
-  nativePicker: {
-    width: '100%',
-    color: 'black',
-    backgroundColor: 'transparent',
-    ...Platform.select({
-      android: { height: 60, marginLeft: -5 },
-    }),
-  },
   centerContainer: { flex: 1, marginTop: 60, alignItems: 'center', justifyContent: 'center' },
   loaderText: { marginTop: 12, color: 'green', fontSize: 14, fontWeight: '600' },
   noResultText: { marginTop: 15, color: '#999', fontSize: 16, fontWeight: '500', textAlign: 'center' },
@@ -445,7 +456,7 @@ const styles = StyleSheet.create({
   employeeHighlight: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 12, borderRadius: 15, borderWidth: 1, borderColor: '#C8E6C9', marginBottom: 12 },
   highlightLabel: { fontSize: 11, color: '#4CAF50', fontWeight: 'bold' },
   highlightValue: { fontSize: 16, fontWeight: 'bold', color: '#2E7D32' },
-  formCard: { backgroundColor: '#FFF', borderRadius: 20, padding: 15, marginBottom: 12, elevation: 1 },
+  formCard: { backgroundColor: '#FFF', borderRadius: 20, padding: 15, marginBottom: 12, elevation: 1, paddingBottom: 16 },
   sectionHeading: { fontSize: 15, fontWeight: 'bold', color: '#333', marginBottom: 10 },
   inputLabel: { fontSize: 12, fontWeight: '700', color: '#555', marginBottom: 6, marginLeft: 4 },
   iconInput: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9F9F9', borderRadius: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: '#EEE', height: 48 },
@@ -458,8 +469,30 @@ const styles = StyleSheet.create({
   addedSlotCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F1F1F1', padding: 12, borderRadius: 12, marginTop: 10 },
   slotMain: { fontWeight: 'bold', fontSize: 14, color: '#333' },
   slotSub: { fontSize: 12, color: '#666' },
-  textArea: { backgroundColor: '#F9F9F9', borderRadius: 12, borderWidth: 1, borderColor: '#EEE', padding: 12, height: 80, textAlignVertical: 'top', color: 'black' },
+  textArea: { backgroundColor: '#F9F9F9', borderRadius: 12, borderWidth: 1, borderColor: '#EEE', padding: 12, paddingTop: 14, height: 80, textAlignVertical: 'top', color: 'black' },
   finalSubmitBtn: { backgroundColor: 'green', height: 52, borderRadius: 14, marginTop: 8 },
+  modalSafeArea: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  // Centered Modal Style
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pickerContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 15,
+    padding: 20,
+    width: '90%',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  }
 });
 
 export default EmployeeList;

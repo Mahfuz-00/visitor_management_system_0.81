@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Modal,
   Alert,
+  Platform,
 } from 'react-native';
 import { DataContext } from '../../store/GlobalState';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -17,10 +18,10 @@ import { Heading } from '../../components/Heading';
 import { Error } from '../../components/Error';
 import { Input } from '../../components/Input';
 import { FilledButton } from '../../components/FilledButton';
-import { CustomPicker } from '../../components/Picker'; 
-import DatePicker from 'react-native-date-picker';
+import CustomPicker from '../../components/CustomPicker.tsx';
 import sample_profile_avatar from '../../assets/sample_profile_avatar.png';
 import { SvgUri } from 'react-native-svg';
+import DateTimePickerField from '../../components/DateTimePickerField';
 
 export default function AppointmentDetails({ route, navigation }: any) {
   const [appointmentDetails, setAppointmentDetails] = useState(route.params.appointmentDetails);
@@ -29,6 +30,8 @@ export default function AppointmentDetails({ route, navigation }: any) {
 
   const [error, setError] = useState('');
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  
+  // Picker visibility states
   const [openDatePicker, setOpenDatePicker] = useState(false);
   const [openTimePicker, setOpenTimePicker] = useState(false);
 
@@ -91,10 +94,10 @@ export default function AppointmentDetails({ route, navigation }: any) {
 
   const confirmDialog = (title: string, subTitle: string, onConfirm: () => void) => {
     Alert.alert(
-      title, 
-      subTitle, 
+      title,
+      subTitle,
       [
-        { text: language === 'EN' ? 'Cancel' : 'বাতিল', style: 'cancel' }, 
+        { text: language === 'EN' ? 'Cancel' : 'বাতিল', style: 'cancel' },
         { text: language === 'EN' ? 'Yes' : 'হ্যাঁ', onPress: onConfirm }
       ]
     );
@@ -107,11 +110,10 @@ export default function AppointmentDetails({ route, navigation }: any) {
     setNoOfPerson(appointmentDetails.number_of_person.toString());
     setMeetingDate(moment(appointmentDetails.meeting.day, 'DD MMMM, YYYY').toDate());
     setMeetingTime(moment(appointmentDetails.meeting.time, 'HH:mm A').toDate());
-    
-    // Logic to find the ID based on the duration label coming from details
+
     const foundDur = durations.find(d => d.name === appointmentDetails.meeting.duration);
     setMeetingDuration(foundDur ? foundDur.id : '');
-    
+
     setPurpose(appointmentDetails.purpose);
     setNote(appointmentDetails.meeting.note || '');
   };
@@ -119,11 +121,11 @@ export default function AppointmentDetails({ route, navigation }: any) {
   useEffect(() => {
     const fetchSelectData = async () => {
       const resD = await getData('appointment/durations', auth.token!);
-      if(resD.data) {
+      if (resD.data) {
         setDurations(Object.entries(resD.data).map(([id, name]) => ({ id, name: name as string })));
       }
       const resP = await getData('appointment/purposes', auth.token!);
-      if(resP.data) {
+      if (resP.data) {
         setPurposes(resP.data.map((p: string) => ({ id: p, name: p })));
       }
     };
@@ -167,7 +169,7 @@ export default function AppointmentDetails({ route, navigation }: any) {
 
           <View style={styles.qrCard}>
             <Text style={styles.qrHeaderTitle}>
-                {language === 'EN' ? 'APPOINTMENT QR CODE' : 'অ্যাপয়েন্টমেন্ট কিউআর কোড'}
+              {language === 'EN' ? 'APPOINTMENT QR CODE' : 'অ্যাপয়েন্টমেন্ট কিউআর কোড'}
             </Text>
             <View style={styles.qrContainer}>
               {appointmentDetails.qr_code ? (
@@ -181,7 +183,7 @@ export default function AppointmentDetails({ route, navigation }: any) {
               )}
             </View>
             <Text style={styles.qrFooter}>
-                {language === 'EN' ? 'Scanning ensures faster check-in' : 'স্ক্যান করলে দ্রুত চেক-ইন নিশ্চিত হয়'}
+              {language === 'EN' ? 'Scanning ensures faster check-in' : 'স্ক্যান করলে দ্রুত চেক-ইন নিশ্চিত হয়'}
             </Text>
           </View>
         </View>
@@ -191,41 +193,41 @@ export default function AppointmentDetails({ route, navigation }: any) {
         <View style={styles.stickyFooter}>
           <TouchableOpacity
             style={[styles.btn, { backgroundColor: '#2E7D32' }]}
-            onPress={() => appointmentDetails.status === 'Pending' 
-                ? setShowUpdateModal(true) 
-                : confirmDialog(language === 'EN' ? 'Accept!' : 'গ্রহণ করুন!', language === 'EN' ? 'Are you sure?' : 'আপনি কি নিশ্চিত?', () => handleAction('accept'))}
+            onPress={() => appointmentDetails.status === 'Pending'
+              ? setShowUpdateModal(true)
+              : confirmDialog(language === 'EN' ? 'Accept!' : 'গ্রহণ করুন!', language === 'EN' ? 'Are you sure?' : 'আপনি কি নিশ্চিত?', () => handleAction('accept'))}
           >
             <Icon name={appointmentDetails.status === 'Pending' ? "create" : "checkmark-circle"} size={20} color="#FFF" />
             <Text style={styles.btnLabel}>
-                {appointmentDetails.status === 'Pending' 
-                    ? (language === 'EN' ? 'Update' : 'আপডেট') 
-                    : (language === 'EN' ? 'Accept' : 'গ্রহণ')}
+              {appointmentDetails.status === 'Pending'
+                ? (language === 'EN' ? 'Update' : 'আপডেট')
+                : (language === 'EN' ? 'Accept' : 'গ্রহণ')}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.btn, { backgroundColor: '#D32F2F' }]}
-            onPress={() => appointmentDetails.status === 'Pending' 
-                ? confirmDialog(language === 'EN' ? 'Delete!' : 'মুছে ফেলুন!', language === 'EN' ? 'Are you sure?' : 'আপনি কি নিশ্চিত?', handleDelete) 
-                : confirmDialog(language === 'EN' ? 'Reject!' : 'বাতিল করুন!', language === 'EN' ? 'Are you sure?' : 'আপনি কি নিশ্চিত?', () => handleAction('reject'))}
+            onPress={() => appointmentDetails.status === 'Pending'
+              ? confirmDialog(language === 'EN' ? 'Delete!' : 'মুছে ফেলুন!', language === 'EN' ? 'Are you sure?' : 'আপনি কি নিশ্চিত?', handleDelete)
+              : confirmDialog(language === 'EN' ? 'Reject!' : 'বাতিল করুন!', language === 'EN' ? 'Are you sure?' : 'আপনি কি নিশ্চিত?', () => handleAction('reject'))}
           >
             <Icon name="trash" size={20} color="#FFF" />
             <Text style={styles.btnLabel}>
-                {appointmentDetails.status === 'Pending' 
-                    ? (language === 'EN' ? 'Delete' : 'মুছুন') 
-                    : (language === 'EN' ? 'Reject' : 'বাতিল')}
+              {appointmentDetails.status === 'Pending'
+                ? (language === 'EN' ? 'Delete' : 'মুছুন')
+                : (language === 'EN' ? 'Reject' : 'বাতিল')}
             </Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* UPDATE MODAL */}
+      {/* PRIMARY UPDATE MODAL */}
       <Modal animationType="slide" transparent visible={showUpdateModal} onRequestClose={() => setShowUpdateModal(false)} onShow={handleOnShowUpdateModal}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Heading style={{ color: '#2E7D32', fontSize: 18 }}>
-                  {language === 'EN' ? 'Update Appointment' : 'অ্যাপয়েন্টমেন্ট আপডেট করুন'}
+                {language === 'EN' ? 'Update Appointment' : 'অ্যাপয়েন্টমেন্ট আপডেট করুন'}
               </Heading>
               <TouchableOpacity onPress={() => setShowUpdateModal(false)}>
                 <Icon name="close-circle" size={28} color="#D32F2F" />
@@ -281,6 +283,8 @@ export default function AppointmentDetails({ route, navigation }: any) {
                   selectedValue={meetingDuration}
                   onValueChange={setMeetingDuration}
                   items={durations}
+                  icon="time-outline"
+                  showChevron={true}
                 />
               </View>
 
@@ -291,6 +295,8 @@ export default function AppointmentDetails({ route, navigation }: any) {
                   selectedValue={purpose}
                   onValueChange={setPurpose}
                   items={purposes}
+                  icon="bookmark-outline"
+                  showChevron={true}
                 />
               </View>
 
@@ -310,17 +316,44 @@ export default function AppointmentDetails({ route, navigation }: any) {
                 title={language === 'EN' ? "Save Changes" : "পরিবর্তন সংরক্ষণ করুন"}
                 style={styles.modalSubmitBtn}
                 onPress={() => confirmDialog(
-                    language === 'EN' ? 'Update!' : 'আপডেট!', 
-                    language === 'EN' ? 'Are you sure?' : 'আপনি কি নিশ্চিত?', 
-                    handleUpdateSubmit
+                  language === 'EN' ? 'Update!' : 'আপডেট!',
+                  language === 'EN' ? 'Are you sure?' : 'আপনি কি নিশ্চিত?',
+                  handleUpdateSubmit
                 )}
               />
             </ScrollView>
+
+            {/* PSEUDO-MODAL PICKER OVERLAY (Inside the main Modal to avoid nesting issues) */}
+            {(openDatePicker || openTimePicker) && (
+              <TouchableOpacity 
+                style={styles.internalPickerOverlay} 
+                activeOpacity={1} 
+                onPress={() => { setOpenDatePicker(false); setOpenTimePicker(false); }}
+              >
+                <View style={{ width: '90%' }}>
+                  {openDatePicker && (
+                    <DateTimePickerField
+                      label={language === 'EN' ? 'Date' : 'তারিখ'}
+                      value={meetingDate}
+                      mode="date"
+                      onChange={(date: any) => { setMeetingDate(date); if (Platform.OS === 'android') setOpenDatePicker(false); }}
+                      onClose={() => setOpenDatePicker(false)}
+                    />
+                  )}
+                  {openTimePicker && (
+                    <DateTimePickerField
+                      label={language === 'EN' ? 'Time' : 'সময়'}
+                      value={meetingTime}
+                      mode="time"
+                      onChange={(time: any) => { setMeetingTime(time); if (Platform.OS === 'android') setOpenTimePicker(false); }}
+                      onClose={() => setOpenTimePicker(false)}
+                    />
+                  )}
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
-
-        <DatePicker modal mode="date" open={openDatePicker} date={meetingDate} onConfirm={date => { setOpenDatePicker(false); setMeetingDate(date); }} onCancel={() => setOpenDatePicker(false)} />
-        <DatePicker modal mode="time" open={openTimePicker} date={meetingTime} onConfirm={time => { setOpenTimePicker(false); setMeetingTime(time); }} onCancel={() => setOpenTimePicker(false)} />
       </Modal>
     </View>
   );
@@ -349,7 +382,7 @@ const styles = StyleSheet.create({
   btn: { flexDirection: 'row', height: 48, width: '48%', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   btnLabel: { color: '#FFF', fontWeight: 'bold', fontSize: 15, marginLeft: 8 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 25, borderTopRightRadius: 25, paddingHorizontal: 20, paddingTop: 15, paddingBottom: 20, maxHeight: '85%' },
+  modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 25, borderTopRightRadius: 25, paddingHorizontal: 20, paddingTop: 15, paddingBottom: 20, maxHeight: '85%', position: 'relative' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   formGroup: { marginBottom: 12 },
   formRow: { flexDirection: 'row', justifyContent: 'space-between' },
@@ -359,5 +392,26 @@ const styles = StyleSheet.create({
   lockedText: { marginLeft: 10, color: '#777', fontSize: 14 },
   datePickerText: { marginLeft: 10, fontSize: 14, color: '#333' },
   modalSubmitBtn: { marginTop: 15, backgroundColor: 'green', borderRadius: 12, height: 50 },
-  textArea: { backgroundColor: '#F9F9F9', borderRadius: 12, borderWidth: 1, borderColor: '#EEE', padding: 10, height: 80, textAlignVertical: 'top', color: 'black' },
+  textArea: { backgroundColor: '#F9F9F9', borderRadius: 12, borderWidth: 1, borderColor: '#EEE', padding: 12, paddingTop: 14, height: 80, textAlignVertical: 'top', color: 'black' },
+  
+  // Picker Overlay Styles
+  internalPickerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+    borderRadius: 25,
+  },
+  pickerContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 15,
+    padding: 20,
+    width: '90%',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  }
 });
