@@ -9,7 +9,7 @@ import {
   Alert
 } from 'react-native';
 import { DataContext } from '../../store/GlobalState';
-import { postData, postImage, getData } from '../../utils/fetchData';
+import { postData, postImage, getData, deleteData } from '../../utils/fetchData';
 import { Error } from '../../components/Error';
 import { Input } from '../../components/Input';
 import CustomPicker from '../../components/CustomPicker.tsx';
@@ -135,6 +135,48 @@ export default function EditProfile({ navigation }: any) {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      language === 'BN' ? 'অ্যাকাউন্ট মুছুন' : 'Delete Account',
+      language === 'BN' 
+        ? 'আপনি কি নিশ্চিত যে আপনি আপনার অ্যাকাউন্টটি চিরতরে মুছে ফেলতে চান?' 
+        : 'Are you sure you want to permanently delete your account?',
+      [
+        { text: language === 'BN' ? 'না' : 'No', style: 'cancel' },
+        {
+          text: language === 'BN' ? 'হ্যাঁ' : 'Yes',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsSubmitting(true);
+              const res = await deleteData('user/delete', auth.token!);
+              
+              // Assuming 200 or 204 status means success
+              Alert.alert(
+                language === 'BN' ? 'মুছে ফেলা হয়েছে' : 'Deleted',
+                language === 'BN' ? 'আপনার অ্যাকাউন্টটি সফলভাবে মুছে ফেলা হয়েছে' : 'Your account has been successfully deleted'
+              );
+
+              // Clear local storage and state
+              await AsyncStorage.removeItem('user');
+              dispatch({ type: 'AUTH', payload: {} });
+              
+              // Navigate to Login or Welcome screen
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }], 
+              });
+            } catch (err) {
+              setError(language === 'BN' ? 'অ্যাকাউন্ট মুছতে ব্যর্থ হয়েছে' : 'Failed to delete account');
+            } finally {
+              setIsSubmitting(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -242,6 +284,19 @@ export default function EditProfile({ navigation }: any) {
               </Text>
             )}
           </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={handleDeleteAccount}
+            disabled={isSubmitting}
+          >
+            <Icon name="trash-outline" size={20} color="#D32F2F" />
+            <Text style={styles.deleteBtnText}>
+              {language === 'BN' ? 'অ্যাকাউন্ট মুছে ফেলুন' : 'DELETE ACCOUNT'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -324,5 +379,26 @@ const styles = StyleSheet.create({
   dotsContainer: {
     width: 30,
     marginLeft: 2,
-  }
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#EEE',
+    marginVertical: 20,
+  },
+  deleteBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+    backgroundColor: '#FFEBEE',
+  },
+  deleteBtnText: {
+    color: '#D32F2F',
+    fontWeight: '700',
+    fontSize: 14,
+    marginLeft: 8,
+  },
 });

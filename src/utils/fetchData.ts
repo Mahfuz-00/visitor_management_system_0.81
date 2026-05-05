@@ -147,3 +147,24 @@ export const deleteData = async (url: string, token: string) => {
     const data = await res.json();
     return data;
 };
+
+export const deleteAccount = async (url: string, token: string) => {
+    const res = await fetch(`${baseUrl}/api/${url}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    console.log('Delete Request URL:', `${baseUrl}/api/${url}`);
+    
+    const text = await res.text();
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch (e) {
+        data = { message: text };
+    }
+    return { data, status: res.status };
+};
